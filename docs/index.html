@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STORM — Sparse Topology-Aware Optimal Reachability Matrix</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>STORM</h1>
+  <div class="subtitle">Small World, Small Efforts</div>
+  <div class="subtitle">Sparse Topology-Aware Optimal Reachability Matrix</div>
+  <div class="authors">Sung-Soo Kim (ETRI) &amp; Young-Min Kang (Tongmyong University)</div>
+</header>
+
+<nav>
+  <a href="#overview">Overview</a>
+  <a href="#algorithm">Algorithm</a>
+  <a href="#results">Results</a>
+  <a href="#discussion">Discussion</a>
+  <a href="#links">Links</a>
+  <a href="howto.html">How to Run</a>
+  <a href="references.html">References</a>
+</nav>
+
+<div class="container">
+
+<!-- ========== Overview ========== -->
+<section id="overview">
+<h2>Overview</h2>
+
+<p>STORM (<strong>S</strong>parse <strong>T</strong>opology-aware <strong>O</strong>ptimal <strong>R</strong>eachability <strong>M</strong>atrix) is a Cython-accelerated framework for incremental all-pairs shortest path (APSP) computation. It extends the <a href="https://ieeexplore.ieee.org/document/9424548" target="_blank">AORM framework</a> (IEEE Access, 2021) with five structural changes and a fused C pruning kernel.</p>
+
+<div class="card">
+<h3>Why STORM?</h3>
+<p>Real-world networks are overwhelmingly <em>small-world</em>: Facebook's 721 million users are connected by an average distance of just 4.74 hops. Most applications—traffic prediction, epidemic tracing, influence analysis—need only local distance information (k=3–5 hops), not full APSP. STORM's incremental design provides this information faster than any existing method.</p>
+</div>
+
+<h3>Four Contributions</h3>
+<ol>
+  <li><strong>Systematic audit:</strong> Seven AORM limitations identified via code-paper comparison.</li>
+  <li><strong>Optimized implementation:</strong> Five structural changes (sparse SpMM, progressive sparsity, corrected convergence, sparse Heaviside, dense boolean footprint) + Cython fused kernel eliminating 54% of Python overhead.</li>
+  <li><strong>Topology-aware analysis:</strong> Graph diameter governs incremental APSP effectiveness. STORM excels on small-world networks (d ≤ 13) covering virtually all practical scenarios.</li>
+  <li><strong>Dynamic support (D-STORM):</strong> 22–33× faster edge addition via incremental distance matrix updates.</li>
+</ol>
+</section>
+
+<!-- ========== Algorithm ========== -->
+<section id="algorithm">
+<h2>Algorithm</h2>
+
+<p>STORM preserves AORM's iterative reachability framework while introducing five structural changes:</p>
+
+<table>
+  <tr><th>ID</th><th>AORM</th><th>STORM</th><th>Effect</th></tr>
+  <tr><td>C1</td><td>Dense matmul O(n³)</td><td>Sparse SpMM O(nnz·c̄)</td><td>Sparse graph acceleration</td></tr>
+  <tr><td>C2</td><td>Fixed O(n²)/iter</td><td>nnz-proportional cost</td><td>Progressive sparsity</td></tr>
+  <tr><td>C3</td><td>Pre-prune check O(n²)</td><td>Post-prune nnz=0, O(1)</td><td>Correct + fast</td></tr>
+  <tr><td>C4</td><td>heaviside O(n²)</td><td>data[:]=1 O(nnz)</td><td>nnz-only work</td></tr>
+  <tr><td>C5</td><td>Sparse F add O(n²)</td><td>Dense bool F, O(1)/entry</td><td>Footprint acceleration</td></tr>
+</table>
+
+<p>The Cython C-extension (<code>_storm_core.pyx</code>) then fuses pruning, convergence checking, and footprint update into a single C loop, eliminating three separate SciPy sparse operations per iteration. The effect scales with iteration count: 17% on BA (d=5) but <strong>550%</strong> on Grid (d=88).</p>
+
+<h3>D-STORM: Dynamic Edge Addition</h3>
+<p>When edge (u,v) is added: D<sub>i,j</sub><sup>new</sup> = min(D<sub>i,j</sub><sup>old</sup>, D<sub>i,u</sub> + 1 + D<sub>v,j</sub>). Only 0.008% of pairs are affected per update, yielding 22–33× speedup over full recomputation.</p>
+</section>
+
+<!-- ========== Results ========== -->
+<section id="results">
+<h2>Experimental Results</h2>
+
+<h3>Facebook Social Network (n=4,039)</h3>
+<table>
+  <tr><th>Method</th><th>Time (s)</th><th>vs STORM</th><th>vs NetworkX</th></tr>
+  <tr><td><strong>STORM</strong></td><td><strong>1.156</strong></td><td>1.0×</td><td class="highlight">16.5×</td></tr>
+  <tr><td>SciPy (C Dijkstra)</td><td>2.960</td><td>0.39×</td><td>6.5×</td></tr>
+  <tr><td>I-AORM</td><td>3.502</td><td>0.33×</td><td>5.5×</td></tr>
+  <tr><td>M-AORM</td><td>4.970</td><td>0.23×</td><td>3.8×</td></tr>
+  <tr><td>NetworkX</td><td>19.110</td><td>0.06×</td><td>1.0×</td></tr>
+</table>
+
+<h3>Hop-Constrained APSP — STORM's Strongest Capability</h3>
+<table>
+  <tr><th>k</th><th>STORM</th><th>I-AORM</th><th>NetworkX</th><th>vs I-AORM</th><th>vs NX</th></tr>
+  <tr><td>2</td><td>0.080s</td><td>0.545s</td><td>0.764s</td><td class="highlight">6.8×</td><td>9.6×</td></tr>
+  <tr><td>5</td><td>0.959s</td><td>1.858s</td><td>17.520s</td><td>1.9×</td><td class="highlight">18.3×</td></tr>
+  <tr><td>8</td><td>1.178s</td><td>3.206s</td><td>19.162s</td><td>2.7×</td><td>16.3×</td></tr>
+</table>
+<p>At k=5, 89% of all shortest paths are already found — sufficient for traffic congestion prediction (k=3–5) and epidemic tracing (k=2–4).</p>
+
+<h3>Topology Effect: Diameter Determines Performance</h3>
+<table>
+  <tr><th>Topology</th><th>Diameter</th><th>STORM</th><th>SciPy</th><th>STORM/SciPy</th></tr>
+  <tr><td>BA (scale-free)</td><td>5</td><td>0.283s</td><td>0.480s</td><td class="highlight">1.7×</td></tr>
+  <tr><td>ER (random)</td><td>6</td><td>0.320s</td><td>0.488s</td><td class="highlight">1.5×</td></tr>
+  <tr><td>WS (small-world)</td><td>13</td><td>0.291s</td><td>0.422s</td><td class="highlight">1.5×</td></tr>
+  <tr><td>Grid (2D lattice)</td><td>88</td><td>0.475s</td><td>0.303s</td><td>0.6×</td></tr>
+  <tr><td>PLC (powerlaw)</td><td>5</td><td>0.284s</td><td>0.481s</td><td class="highlight">1.7×</td></tr>
+</table>
+<p>STORM wins on all small-diameter topologies (d ≤ 13). On Grid (d=88), SciPy is 1.6× faster for <em>full</em> APSP, but hop-constrained STORM at k ≤ 16 is still faster than SciPy.</p>
+
+<h3>Grid Approximate APSP</h3>
+<div class="fig">
+  <img src="../03_a_experimental_result/grid_comparison.png" alt="Grid APSP approximation at k=2,4,8,16,32 vs exact">
+  <div class="caption">Grid 20×20: STORM at k=2,4,8,16,32 vs SciPy exact (d=38). At k=16, STORM captures 69% of pairs at 0.65× SciPy's cost.</div>
+</div>
+
+<h3>D-STORM Dynamic Updates</h3>
+<table>
+  <tr><th>n</th><th>ADD (ms)</th><th>Full (ms)</th><th>Speedup</th></tr>
+  <tr><td>500</td><td>0.80</td><td>17.2</td><td class="highlight">22×</td></tr>
+  <tr><td>1,000</td><td>2.32</td><td>68.9</td><td class="highlight">30×</td></tr>
+  <tr><td>2,000</td><td>8.52</td><td>283.7</td><td class="highlight">33×</td></tr>
+</table>
+</section>
+
+<!-- ========== Discussion ========== -->
+<section id="discussion">
+<h2>Discussion</h2>
+
+<div class="card">
+<h3>Why STORM Is Fast</h3>
+<p>Three synergistic mechanisms: (1) Sparse SpMM exploits graph sparsity — Facebook has only 1.1% density; (2) Progressive sparsity provides automatic acceleration — nnz drops 370× from peak to convergence; (3) Cython fusion eliminates 54% of per-iteration overhead, compounding over d iterations.</p>
+</div>
+
+<div class="card">
+<h3>When SciPy Wins — and Why It Doesn't Matter</h3>
+<p>SciPy outperforms STORM for full APSP on Grid (d=88) by 1.6×. But: (1) Small-world networks dominate practice (Facebook d≈4.7, Twitter d≈5); (2) Even on Grid, hop-constrained STORM is faster for k ≤ 16; (3) SciPy fundamentally cannot provide incremental queries, intermediate results, dynamic updates, or reachability decomposition.</p>
+</div>
+
+<div class="card">
+<h3>Algorithm Selection Guide</h3>
+<table>
+  <tr><th>Scenario</th><th>Best</th><th>2nd</th></tr>
+  <tr><td>Small-world APSP</td><td><strong>STORM</strong></td><td>SciPy</td></tr>
+  <tr><td>High diameter (grid)</td><td>SciPy</td><td>STORM</td></tr>
+  <tr><td>k-hop query</td><td><strong>STORM</strong></td><td>I-AORM</td></tr>
+  <tr><td>Edge addition</td><td><strong>D-STORM</strong></td><td>Recompute</td></tr>
+  <tr><td>Directed + disconnected</td><td><strong>STORM</strong></td><td>I-AORM</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ========== Links ========== -->
+<section id="links">
+<h2>Links</h2>
+
+<div class="links-grid">
+  <a href="https://ieeexplore.ieee.org/document/9424548" target="_blank" class="link-card">
+    <div class="icon">📄</div>
+    <div class="label">AORM Paper</div>
+    <div class="desc">IEEE Access (Open Access)</div>
+  </a>
+  <a href="https://github.com/dknife/STORM/tree/main/02_STORM_Implement" target="_blank" class="link-card">
+    <div class="icon">💻</div>
+    <div class="label">STORM Code</div>
+    <div class="desc">GitHub Implementation</div>
+  </a>
+  <a href="https://github.com/dknife/STORM/tree/main/03_experiment_result" target="_blank" class="link-card">
+    <div class="icon">📊</div>
+    <div class="label">Experiments</div>
+    <div class="desc">Benchmark Scripts &amp; Results</div>
+  </a>
+  <a href="howto.html" class="link-card">
+    <div class="icon">🚀</div>
+    <div class="label">How to Run</div>
+    <div class="desc">Installation &amp; Usage Guide</div>
+  </a>
+  <a href="references.html" class="link-card">
+    <div class="icon">📚</div>
+    <div class="label">References</div>
+    <div class="desc">Full Bibliography</div>
+  </a>
+</div>
+</section>
+
+</div>
+
+<footer>
+  <p>STORM Project &copy; 2026 | Sung-Soo Kim (ETRI) &amp; Young-Min Kang (Tongmyong University)</p>
+  <p><a href="https://github.com/dknife/STORM">GitHub Repository</a></p>
+</footer>
+
+</body>
+</html>

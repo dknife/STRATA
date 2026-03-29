@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.so
+*.c
+!_storm_core.pyx
+*.egg-info/
+build/
+dist/
+.DS_Store

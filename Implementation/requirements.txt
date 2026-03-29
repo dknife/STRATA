@@ -1,0 +1,11 @@
+numpy>=1.21
+scipy>=1.7
+networkx>=3.0
+tqdm>=4.60
+
+# Optional: GPU acceleration
+# cupy-cuda12x>=12.0
+
+# Optional: GNN integration (STORM-PE)
+# torch>=2.0
+# torch_geometric>=2.3

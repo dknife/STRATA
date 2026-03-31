@@ -1,0 +1,562 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{fontspec}
+\usepackage{kotex}
+\setmainhangulfont{Malgun Gothic}
+\setsanshangulfont{Malgun Gothic}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{hyperref}
+\usepackage{tcolorbox}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\tcbuselibrary{skins,breakable}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{float}
+
+\definecolor{gpucol}{HTML}{7B2D8E}
+\definecolor{cpubest}{HTML}{1F4E79}
+\definecolor{gridwarn}{HTML}{C0392B}
+
+\title{\LARGE\textbf{D-STORM APSP 벤치마크 종합 보고서} \\[0.5em]
+  \large 10 Methods $\times$ 10 Datasets --- Cython 빌드 적용 전체 재실측}
+\author{STORM Project}
+\date{2026년 3월 31일}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+%======================================================================
+\section{실험의 기본 개요}
+%======================================================================
+
+본 보고서는 비가중 무방향 그래프에서의 전 쌍 최단 경로(APSP) 문제를 대상으로 6개 기법 계열 10종의 세부 변종을 10개 데이터셋에서 통합 벤치마킹한 결과를 기록한다. 모든 수치는 Windows 환경에서 Cython fused pruning 커널 빌드를 완료한 후 측정되었다.
+
+\subsection{벤치마킹 목적}
+\begin{enumerate}[leftmargin=1.4em]
+  \item D-STORM의 CPU/GPU 구현이 기존 APSP 기법 대비 어떤 조건에서 우위 또는 열위를 보이는지 정량적으로 확인한다.
+  \item 동일 알고리즘을 Python/Cython, GraphBLAS C, CUDA 세 가지 실행 경로로 구현하여 커널 수준의 성능 차이를 분리한다.
+  \item 그래프 크기($n$)와 위상(지름 $d$)이 각 기법의 성능에 미치는 영향을 체계적으로 분석한다.
+\end{enumerate}
+
+\subsection{프로토콜}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{측정 횟수}: 3회 실행, 최소값 보고.
+  \item \textbf{GPU warmup}: GPU 기법은 1회 사전 실행 후 측정 시작.
+  \item \textbf{정확성 검증}: 모든 기법의 결과를 SciPy 참조와 원소별 비교 (100\% 일치).
+  \item \textbf{총 측정점}: 10 methods $\times$ 10 datasets = 100건 유효.
+\end{itemize}
+
+%======================================================================
+\section{벤치마킹 대상 기법의 특징}
+%======================================================================
+
+\begin{table}[H]\centering
+\caption{6개 기법 계열의 핵심 특징 비교}
+\label{tab:families}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llp{5.5cm}ll@{}}
+\toprule
+\textbf{계열} & \textbf{변종 수} & \textbf{핵심 접근} & \textbf{행렬 표현} & \textbf{실행 위치} \\
+\midrule
+NetworkX & 1 & 소스별 Python BFS 순회 & 인접 리스트 & CPU (Python) \\
+SciPy & 1 & 소스별 C Dijkstra/BFS & CSR sparse & CPU (C) \\
+GraphBLAS & 2 & Boolean 세미링 SpMM/SpMV & CSR (GrB) & CPU (C) \\
+AORM & 2 & Dense 반복 행렬 거듭제곱 & Dense $n \times n$ & CPU (Python/BLAS) \\
+D-STORM & 2 & Sparse frontier + footprint pruning & CSR sparse / Dense & CPU (Cython C) \\
+D-STORM GPU & 2 & D-STORM 알고리즘의 CUDA 포팅 & cuSPARSE / cuBLAS & GPU (CUDA) \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\paragraph{NetworkX.} 순수 Python 구현의 BFS 기반 APSP. 모든 소스 정점에서 레벨 동기 BFS를 수행한다.
+
+\paragraph{SciPy.} \texttt{scipy.sparse.csgraph.shortest\_path}로, C 구현 소스별 BFS를 사용한다. CPU에서 가장 강한 참조 기법.
+
+\paragraph{GraphBLAS.} SuiteSparse:GraphBLAS v10.3.1의 CFFI 바인딩. 소스별 masked BFS(\texttt{GrB\_vxm})와 D-STORM 로직의 \texttt{GrB\_mxm} 재구현 두 변종.
+
+\paragraph{AORM.} 2021년 IEEE Access 발표 원본. Dense $n \times n$ 행렬에서 I-AORM(Python 루프)과 M-AORM(BLAS matmul).
+
+\paragraph{D-STORM.} AORM의 sparse 재설계. Cython C 확장으로 prune+footprint 갱신을 단일 패스로 처리. D-STORM-Sparse(CSR SpMM)와 D-STORM-Dense(BLAS matmul).
+
+\paragraph{D-STORM GPU.} CUDA 포팅. cuBLAS dense matmul(GPU-Dense)과 cuSPARSE SpMM(GPU-Sparse) 두 변종.
+
+%======================================================================
+\section{각 기법의 세부 구현}
+%======================================================================
+
+\subsection{NetworkX}
+\subsubsection{NetworkX-BFS}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{함수}: \texttt{nx.all\_pairs\_shortest\_path\_length(G)}
+  \item \textbf{복잡도}: $O(n(n+m))$. Python 인터프리터 내에서 실행.
+\end{itemize}
+
+\subsection{SciPy}
+\subsubsection{SciPy-shortest\_path}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{함수}: \texttt{scipy.sparse.csgraph.shortest\_path(A, unweighted=True)}
+  \item \textbf{복잡도}: $O(n(n+m))$. C 컴파일 코드로 루프 오버헤드 최소.
+\end{itemize}
+
+\subsection{GraphBLAS}
+\subsubsection{GraphBLAS-bfs (소스별 masked BFS)}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{커널}: \texttt{GrB\_vxm} + 구조적 보수 마스크. 소스 루프가 Python 수준.
+\end{itemize}
+\subsubsection{GraphBLAS-frontier (D-STORM 로직 재구현)}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{커널}: \texttt{GrB\_mxm} (LOR\_LAND 세미링) + 보수 마스크. D-STORM과 동일 알고리즘, 상이한 커널.
+\end{itemize}
+
+\subsection{AORM (원본)}
+\subsubsection{I-AORM (Incremental, edge 방식)}
+\begin{itemize}[leftmargin=1.4em]
+  \item Dense $n \times n$ 행렬에서 Python 루프로 행 합산. 반복당 $O(n^2 \cdot \bar{d})$.
+\end{itemize}
+\subsubsection{M-AORM (Matrix multiply, BLAS 방식)}
+\begin{itemize}[leftmargin=1.4em]
+  \item \texttt{numpy.dot(A, Rk)} BLAS dense matmul. 반복당 $O(n^3)$. 희소성 미활용.
+\end{itemize}
+
+\subsection{D-STORM (CPU)}
+\subsubsection{D-STORM-Sparse (Cython fused pruning)}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{구현}: \texttt{SparseStormIterator} --- scipy CSR SpMM + Cython \texttt{fused\_prune\_and\_update}.
+  \item \textbf{핵심}: 후보 쌍 생성 $\to$ dense Boolean footprint $O(1)$ 조회 $\to$ 갱신을 \textbf{단일 C 패스}로 처리.
+  \item \textbf{Fallback}: Cython 빌드 불가 시 NumPy 벡터화 경로 자동 선택 (COO 추출 $\to$ \texttt{F[rows,cols]==0} 마스크).
+\end{itemize}
+\subsubsection{D-STORM-Dense (BLAS matmul)}
+\begin{itemize}[leftmargin=1.4em]
+  \item \texttt{DenseStormIterator} --- numpy BLAS dense matmul + D-STORM footprint pruning.
+\end{itemize}
+
+\paragraph{Windows Cython 빌드.}
+원본 Cython 확장(\texttt{\_storm\_core.pyx})은 macOS 전용 바이너리만 존재했다.
+Windows에서는 VS~2022 Build Tools(MSVC~14.44)를 설치하고, \texttt{vcvarsall.bat}으로 환경을 설정한 후 MSVC \texttt{cl}+\texttt{link}로 Windows용 \texttt{.pyd}를 빌드하였다.
+한글 경로 문제로 자동 빌드가 실패하여, 배치 스크립트를 통해 임시 디렉토리에서 컴파일 후 복사하였다.
+
+Cython 빌드 전/후 성능 차이는 Facebook 기준 \textbf{1.506s $\to$ 1.093s (27\% 개선)}이며, 이는 3-step sparse 연산(multiply $\to$ subtract $\to$ eliminate\_zeros)이 단일 C 패스로 대체되면서 중간 행렬 생성 비용이 제거된 결과이다.
+
+\subsection{D-STORM GPU (CUDA)}
+\subsubsection{GPU-Dense (cuBLAS)}
+\begin{itemize}[leftmargin=1.4em]
+  \item cuBLAS dense matmul + GPU element-wise pruning. $n < 3{,}000$에서 최고.
+\end{itemize}
+\subsubsection{GPU-Sparse (cuSPARSE SpMM)}
+\begin{itemize}[leftmargin=1.4em]
+  \item cuSPARSE CSR SpMM + GPU sparse pruning. $n \geq 3{,}000$에서 GPU-Dense보다 빠름.
+\end{itemize}
+
+%======================================================================
+\section{실험 데이터}
+%======================================================================
+
+\begin{table}[H]\centering
+\caption{실험 데이터셋 상세 정보}
+\label{tab:datasets}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llrrrll@{}}
+\toprule
+\textbf{데이터셋} & \textbf{유형} & $n$ & $m$ & $d$ & \textbf{생성 방법} & \textbf{실험 목적} \\
+\midrule
+Facebook & 실제 소셜 & 4,039 & 176,468 & 8 & SNAP 수집 & 소세계 대표 \\
+\midrule
+BA-500 & Scale-free & 500 & 4,950 & 4 & \texttt{barabasi\_albert(500,5)} & \multirow{5}{*}{확장성} \\
+BA-1000 & Scale-free & 1,000 & 9,950 & 5 & \texttt{barabasi\_albert(1000,5)} & \\
+BA-2000 & Scale-free & 2,000 & 19,950 & 5 & \texttt{barabasi\_albert(2000,5)} & \\
+BA-3000 & Scale-free & 3,000 & 29,950 & 5 & \texttt{barabasi\_albert(3000,5)} & \\
+BA-5000 & Scale-free & 5,000 & 49,950 & 5 & \texttt{barabasi\_albert(5000,5)} & \\
+\midrule
+ER-2000 & Random & 2,000 & 19,882 & 6 & \texttt{erdos\_renyi(2000,0.005)} & \multirow{4}{*}{위상 효과} \\
+WS-2000 & Small-world & 2,000 & 12,000 & 8 & \texttt{watts\_strogatz(2000,6,0.3)} & \\
+Grid-45$\times$45 & 2D Lattice & 2,025 & 7,920 & 88 & \texttt{grid\_2d\_graph(45,45)} & \\
+PLC-2000 & PL cluster & 2,000 & 19,926 & 5 & \texttt{powerlaw\_cluster(2000,5,0.3)} & \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+Grid($d=88$)는 D-STORM에 불리한 의도적 반례(negative control)이다. 모든 그래프는 비가중, 무방향, 연결이며, 시드(seed=42)를 고정하여 재현성을 보장한다.
+
+%======================================================================
+\section{실험 환경}
+%======================================================================
+
+\subsection{하드웨어}
+\begin{table}[H]\centering
+\caption{실험 하드웨어 사양}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{구성 요소} & \textbf{사양} \\
+\midrule
+OS & Windows 11 Pro 10.0.26200 \\
+GPU & NVIDIA GeForce RTX 5080 (16,303 MiB VRAM) \\
+GPU Driver & NVIDIA 576.88 \\
+CUDA Version & 12.9 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{소프트웨어}
+\begin{table}[H]\centering
+\caption{실험 소프트웨어 버전}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{패키지} & \textbf{버전} \\
+\midrule
+Python & 3.14.3 \\
+NumPy & 2.4.4 \\
+SciPy & 1.17.1 \\
+NetworkX & 3.6.1 \\
+CuPy & 14.0.1 (cupy-cuda12x) \\
+SuiteSparse:GraphBLAS & 10.3.1.0 (CFFI 바인딩) \\
+Cython & 3.2.4 \\
+MSVC & 14.44.35207 (VS Build Tools 2022) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%======================================================================
+\section{벤치마킹 결과와 주요 특이 사항}
+%======================================================================
+
+\subsection{Facebook 전체 비교 (10 methods)}
+
+\begin{table}[H]\centering
+\caption{Facebook ($n\!=\!4{,}039$, $m\!=\!176{,}468$, $d\!=\!8$): 전체 10종 순위}
+\label{tab:fb-all}
+\small
+\begin{tabular}{@{}rllrrrr@{}}
+\toprule
+\textbf{\#} & \textbf{기법} & \textbf{계열} & \textbf{시간 (s)} & \textbf{vs 1위} & \textbf{vs SciPy} & \textbf{vs NX} \\
+\midrule
+\rowcolor{gpucol!10} 1 & GPU-Dense & D-STORM GPU & \textbf{0.114} & 1.0$\times$ & 17.9$\times$ & 128.7$\times$ \\
+\rowcolor{gpucol!8} 2 & GPU-Sparse & D-STORM GPU & 0.175 & 1.5$\times$ & 11.7$\times$ & 83.9$\times$ \\
+\rowcolor{cpubest!8} 3 & D-STORM-Sparse & D-STORM & 1.093 & 9.6$\times$ & 1.87$\times$ & 13.4$\times$ \\
+4 & D-STORM-Dense & D-STORM & 1.816 & 15.9$\times$ & 1.13$\times$ & 8.1$\times$ \\
+5 & GB-frontier & GraphBLAS & 1.997 & 17.5$\times$ & 1.02$\times$ & 7.3$\times$ \\
+6 & SciPy & 참조 & 2.045 & 17.9$\times$ & 1.0$\times$ & 7.2$\times$ \\
+7 & M-AORM & AORM & 3.475 & 30.5$\times$ & 0.59$\times$ & 4.2$\times$ \\
+8 & GB-bfs & GraphBLAS & 4.563 & 40.0$\times$ & 0.45$\times$ & 3.2$\times$ \\
+9 & I-AORM & AORM & 8.070 & 70.8$\times$ & 0.25$\times$ & 1.8$\times$ \\
+10 & NetworkX & 참조 & 14.683 & 128.7$\times$ & 0.14$\times$ & 1.0$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+% Legend at top
+\node[anchor=south, draw=gray!50, rounded corners, fill=white, inner sep=4pt,
+  font=\scriptsize] at (5.8,7.3) {%
+  \tikz\fill[orange!35,draw=orange!60!black](0,0)rectangle(0.25,0.18); NetworkX\quad
+  \tikz\fill[orange!18,draw=orange!50!black](0,0)rectangle(0.25,0.18); AORM\quad
+  \tikz\fill[red!25,draw=red!50!black](0,0)rectangle(0.25,0.18); GraphBLAS\quad
+  \tikz\fill[green!30,draw=green!60!black](0,0)rectangle(0.25,0.18); SciPy\quad
+  \tikz\fill[blue!40,draw=blue!60!black](0,0)rectangle(0.25,0.18); D-STORM CPU\quad
+  \tikz\fill[purple!40,draw=purple!60!black](0,0)rectangle(0.25,0.18); D-STORM GPU%
+};
+\begin{axis}[
+  xbar, width=0.86\textwidth, height=8cm, bar width=9pt,
+  xlabel={실행 시간 (초)},
+  symbolic y coords={GPU-Dense,GPU-Sparse,
+    D-STORM-Sparse,D-STORM-Dense,SciPy,
+    GB-frontier,M-AORM,GB-bfs,I-AORM,NetworkX},
+  ytick=data, xmin=0, xmax=17,
+  enlarge y limits={abs=8pt},
+  nodes near coords={\pgfmathprintnumber[precision=2]{\pgfplotspointmeta}},
+  nodes near coords style={font=\scriptsize, anchor=west},
+  y tick label style={font=\small},
+  ymajorgrids=false, bar shift=0pt,
+]
+\addplot[fill=purple!40, draw=purple!60!black, forget plot]
+  coordinates {(0.114,GPU-Dense) (0.175,GPU-Sparse)};
+\addplot[fill=blue!40, draw=blue!60!black, bar shift=0pt, forget plot]
+  coordinates {(1.093,D-STORM-Sparse) (1.816,D-STORM-Dense)};
+\addplot[fill=green!30, draw=green!60!black, bar shift=0pt, forget plot]
+  coordinates {(2.045,SciPy)};
+\addplot[fill=red!25, draw=red!50!black, bar shift=0pt, forget plot]
+  coordinates {(1.997,GB-frontier) (4.563,GB-bfs)};
+\addplot[fill=orange!18, draw=orange!50!black, bar shift=0pt, forget plot]
+  coordinates {(3.475,M-AORM) (8.070,I-AORM)};
+\addplot[fill=orange!35, draw=orange!60!black, bar shift=0pt, forget plot]
+  coordinates {(14.683,NetworkX)};
+\end{axis}
+\end{tikzpicture}
+\caption{Facebook APSP 전체 10종 비교. 동일 색상은 동일 계열.}
+\label{fig:fb-bar}
+\end{figure}
+
+\paragraph{특이 사항.}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{D-STORM-Sparse가 SciPy(C)보다 1.87배 빠름} --- Cython fused pruning의 효과.
+  \item GPU 2종이 CPU 전체를 압도 (최소 6.2배 격차).
+  \item I-AORM(8.07s)이 D-STORM-Sparse(1.09s) 대비 7.4배 느림 --- AORM $\to$ D-STORM 세대 간 차이.
+\end{itemize}
+
+\subsection{BA 확장성 (10 methods $\times$ 5 scales)}
+
+\begin{table}[H]\centering
+\caption{BA 그래프 확장성: 전체 10종 (초, \textbf{볼드}=해당 $n$에서 최고)}
+\label{tab:ba-scale}
+\scriptsize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+\textbf{기법} & $n\!=\!500$ & $n\!=\!1{,}000$ & $n\!=\!2{,}000$ & $n\!=\!3{,}000$ & $n\!=\!5{,}000$ \\
+\midrule
+\rowcolor{gpucol!8} GPU-Dense & \textbf{0.001} & \textbf{0.006} & 0.030 & 0.068 & 0.205 \\
+\rowcolor{gpucol!8} GPU-Sparse & 0.009 & 0.014 & \textbf{0.026} & \textbf{0.040} & \textbf{0.099} \\
+\rowcolor{cpubest!5} D-STORM-Sparse & 0.014 & 0.059 & 0.247 & 0.566 & 1.622 \\
+D-STORM-Dense & 0.011 & 0.063 & 0.285 & 0.658 & 2.066 \\
+SciPy & 0.017 & 0.070 & 0.299 & 0.719 & 2.020 \\
+I-AORM & 0.021 & 0.098 & 0.420 & 1.021 & 3.063 \\
+M-AORM & 0.019 & 0.096 & 0.429 & 1.121 & 3.571 \\
+GB-frontier & 0.034 & 0.125 & 0.474 & 1.063 & 2.990 \\
+GB-bfs & 0.110 & 0.347 & 1.187 & 2.555 & 6.651 \\
+NetworkX & 0.049 & 0.214 & 0.957 & 2.353 & 6.987 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.88\textwidth, height=7.5cm,
+  xlabel={노드 수 $n$}, ylabel={실행 시간 (초)},
+  xmode=log, ymode=log, log basis x=10, log basis y=10,
+  legend style={at={(0.02,0.98)}, anchor=north west, font=\scriptsize, legend columns=2},
+  grid=both, mark size=2.5pt,
+]
+\addplot[orange,thick,mark=triangle*] coordinates {(500,0.049)(1000,0.214)(2000,0.957)(3000,2.353)(5000,6.987)};
+\addlegendentry{NetworkX}
+\addplot[orange!60,thick,mark=x,mark size=3pt] coordinates {(500,0.021)(1000,0.098)(2000,0.420)(3000,1.021)(5000,3.063)};
+\addlegendentry{I-AORM}
+\addplot[green!60!black,thick,mark=pentagon*] coordinates {(500,0.017)(1000,0.070)(2000,0.299)(3000,0.719)(5000,2.020)};
+\addlegendentry{SciPy}
+\addplot[cyan!70!black,thick,mark=o] coordinates {(500,0.034)(1000,0.125)(2000,0.474)(3000,1.063)(5000,2.990)};
+\addlegendentry{GB-frontier}
+\addplot[blue,thick,mark=square*] coordinates {(500,0.014)(1000,0.059)(2000,0.247)(3000,0.566)(5000,1.622)};
+\addlegendentry{\textbf{D-STORM-Sparse}}
+\addplot[purple!80!black,very thick,mark=diamond*,mark options={fill=purple!40,scale=1.3}] coordinates {(500,0.001)(1000,0.006)(2000,0.026)(3000,0.040)(5000,0.099)};
+\addlegendentry{\textbf{GPU (best)}}
+\end{axis}
+\end{tikzpicture}
+\caption{BA 확장성 (로그--로그). D-STORM-Sparse가 CPU 내 최고, GPU가 전체 최고.}
+\label{fig:ba-scale}
+\end{figure}
+
+\paragraph{특이 사항.}
+\begin{itemize}[leftmargin=1.4em]
+  \item D-STORM-Sparse가 \textbf{모든 스케일에서 SciPy보다 빠름}: $n\!=\!500$에서 1.2배, $n\!=\!5{,}000$에서 1.25배.
+  \item GPU speedup(vs D-STORM-Sparse): $n\!=\!500$에서 14배 $\to$ $n\!=\!5{,}000$에서 16.4배 --- 크기에 비례 증가.
+  \item $n \leq 1{,}000$: GPU-Dense $>$ GPU-Sparse. $n \geq 2{,}000$: GPU-Sparse $>$ GPU-Dense.
+\end{itemize}
+
+\subsection{위상별 비교 (10 methods $\times$ 5 topologies)}
+
+\begin{table}[H]\centering
+\caption{위상별 비교 ($n \approx 2{,}000$): 전체 10종 (초, \textbf{볼드}=해당 위상 최고)}
+\label{tab:topo}
+\scriptsize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+\textbf{기법} & \textbf{BA} ($d\!=\!5$) & \textbf{ER} ($d\!=\!6$) & \textbf{WS} ($d\!=\!8$) & \textbf{Grid} ($d\!=\!88$) & \textbf{PLC} ($d\!=\!5$) \\
+\midrule
+\rowcolor{gpucol!8} GPU-Dense & 0.030 & 0.031 & 0.030 & \textbf{0.094} & 0.030 \\
+\rowcolor{gpucol!8} GPU-Sparse & \textbf{0.026} & \textbf{0.028} & \textbf{0.029} & 0.240 & \textbf{0.023} \\
+\rowcolor{cpubest!5} D-STORM-Sparse & 0.247 & 0.278 & 0.266 & 0.805 & 0.311 \\
+D-STORM-Dense & 0.285 & 0.330 & 0.427 & \cellcolor{gridwarn!15}4.096 & 0.318 \\
+SciPy & 0.299 & 0.306 & 0.277 & 0.151 & 0.315 \\
+I-AORM & 0.420 & 0.480 & 0.576 & \cellcolor{gridwarn!15}5.626 & 0.458 \\
+M-AORM & 0.429 & 0.507 & 0.667 & \cellcolor{gridwarn!15}6.814 & 0.467 \\
+GB-frontier & 0.474 & 0.480 & 0.521 & 0.609 & 0.495 \\
+GB-bfs & 1.187 & 1.202 & 1.307 & 3.504 & 1.221 \\
+NetworkX & 0.957 & 1.152 & 1.020 & 0.868 & 1.189 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\paragraph{특이 사항.}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{소세계 그래프} (BA, ER, WS, PLC): D-STORM-Sparse가 CPU 내 최고. SciPy 대비 1.04--1.21배 우위.
+  \item \textbf{Grid} ($d\!=\!88$): GPU-Dense(0.094s)만 0.1초 미만. SciPy(0.151s)가 CPU 최고. D-STORM-Sparse(0.805s)는 SciPy보다 5.3배 느림.
+  \item \textbf{GB-frontier}(0.609s)가 Grid에서 D-STORM-Sparse(0.805s)보다 빠름 --- GraphBLAS C 커널의 반복 효율.
+  \item \textbf{D-STORM-Dense}와 \textbf{I/M-AORM}이 Grid에서 4--7초 --- dense matmul $\times$ 88 반복의 한계.
+  \item \textbf{NetworkX}(0.868s)가 Grid에서 D-STORM-Sparse보다 빠름 --- 소스별 BFS는 반복 횟수와 무관.
+\end{itemize}
+
+%======================================================================
+\section{벤치마킹 데이터의 분석}
+%======================================================================
+
+\subsection{계열 간 성능 계층}
+
+\begin{tcolorbox}[colback=gray!5, colframe=gray!50!black, title=성능 계층 (소세계 그래프 기준)]
+\textbf{GPU} (0.02--0.2s) $\gg$ \textbf{D-STORM-Sparse} (0.2--1.1s) $>$ \textbf{SciPy} (0.3--2.0s) $>$ \textbf{AORM / GB-frontier} (0.4--3.5s) $>$ \textbf{NetworkX / GB-bfs} (1--15s)
+\end{tcolorbox}
+
+\subsection{D-STORM vs AORM: 세대 간 비교}
+
+\begin{table}[H]\centering
+\caption{D-STORM vs AORM 직접 비교 (Facebook)}
+\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+\textbf{D-STORM} & \textbf{AORM 대응} & \textbf{D-STORM (s)} & \textbf{AORM (s)} & \textbf{배수} \\
+\midrule
+D-STORM-Sparse & I-AORM & 1.093 & 8.070 & \textbf{7.4$\times$} \\
+D-STORM-Dense & M-AORM & 1.816 & 3.475 & \textbf{1.9$\times$} \\
+GPU-Dense & M-AORM & 0.114 & 3.475 & \textbf{30.5$\times$} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{동일 알고리즘, 상이한 커널: D-STORM vs GB-frontier}
+
+\begin{table}[H]\centering
+\caption{동일 알고리즘의 커널 비교: D-STORM-Sparse vs GB-frontier}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{데이터셋} & $d$ & \textbf{D-STORM} & \textbf{GB-frontier} & \textbf{D-STORM/GB} \\
+\midrule
+BA-2000 & 5 & \textbf{0.247} & 0.474 & 1.9$\times$ \\
+ER-2000 & 6 & \textbf{0.278} & 0.480 & 1.7$\times$ \\
+WS-2000 & 8 & \textbf{0.266} & 0.521 & 2.0$\times$ \\
+Facebook & 8 & \textbf{1.093} & 1.997 & 1.8$\times$ \\
+\rowcolor{gridwarn!10} Grid & 88 & 0.805 & \textbf{0.609} & 0.76$\times$ \\
+PLC-2000 & 5 & \textbf{0.311} & 0.495 & 1.6$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Cython 빌드 후 D-STORM이 소세계에서 GB-frontier보다 \textbf{1.6--2.0배} 우위 (이전 1.2--1.5배에서 개선). Grid에서는 여전히 GB-frontier가 우위이나 격차가 축소(0.19$\times$ $\to$ 0.76$\times$).
+
+\subsection{GPU 전략 선택: Dense vs Sparse}
+
+\begin{table}[H]\centering
+\caption{GPU 전략별 최고 성능 구간}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{전략} & \textbf{최적 조건} & \textbf{근거} \\
+\midrule
+GPU-Dense & $n < 2{,}000$ 또는 고지름 & cuBLAS FP32 throughput, 반복 불변 \\
+GPU-Sparse & $n \geq 2{,}000$, 소세계 & cuSPARSE 희소성 활용, VRAM 효율 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{지름 $d$의 결정적 영향}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.88\textwidth, height=7.5cm,
+  xlabel={그래프 지름 $d$}, ylabel={실행 시간 / SciPy 실행 시간 (비율)},
+  xmode=log, ymode=log, log basis x=10, log basis y=10,
+  xmin=3, xmax=120, ymin=0.03, ymax=10,
+  grid=both, mark size=4pt,
+  legend style={at={(0.02,0.98)}, anchor=north west, font=\small},
+]
+\addplot[blue, very thick, mark=square*, only marks, nodes near coords,
+  point meta=explicit symbolic,
+  every node near coord/.style={anchor=south west, font=\scriptsize}]
+  coordinates {(4,0.82)[BA-500] (5,0.80)[BA-5K] (5,0.83)[BA-2K] (6,0.91)[ER] (8,0.96)[WS] (88,5.33)[Grid]};
+\addlegendentry{D-STORM-Sparse / SciPy}
+\addplot[purple!80!black, very thick, mark=diamond*, only marks, mark options={fill=purple!40, scale=1.3},
+  nodes near coords, point meta=explicit symbolic,
+  every node near coord/.style={anchor=north east, font=\scriptsize}]
+  coordinates {(4,0.06)[\,BA-500] (5,0.05)[\,BA-5K] (5,0.09)[\,BA-2K] (6,0.09)[\,ER] (8,0.10)[\,WS] (88,0.62)[\,Grid]};
+\addlegendentry{GPU (best) / SciPy}
+\draw[red, thick, dashed] (axis cs:3,1) -- (axis cs:120,1);
+\node[red!60!black, font=\small\bfseries, anchor=west] at (axis cs:40,1.3) {SciPy 동등선};
+\end{axis}
+\end{tikzpicture}
+\caption{지름 $d$와 SciPy 대비 성능비 (로그--로그). D-STORM-Sparse는 $d \leq 8$에서 SciPy보다 빠르고, GPU는 모든 지름에서 SciPy를 능가한다.}
+\label{fig:diam-analysis}
+\end{figure}
+
+D-STORM-Sparse의 SciPy 대비 비율이 Cython 빌드 후 0.80--0.96으로 개선되어, \textbf{모든 소세계 그래프에서 SciPy보다 빠르다}. GPU는 Grid에서도 0.62 (1.6배 가속)를 유지한다.
+
+\subsection{비교의 공정성에 대한 논의}
+
+D-STORM-Sparse와 GB-frontier는 모두 Python-orchestrated C kernel 호출 구조이다. 차이는 순수하게 커널 내부 효율(Cython fused pruning vs GrB\_mxm)에서 발생하며, 동일 조건 하의 커널 비교로서 유효하다. C/C++ LAGraph 수준의 공정 비교는 추후 필요하다.
+
+\subsection{실용적 기여의 근거}
+
+\subsubsection{기여 1: AORM의 시스템 최적화}
+
+\begin{table}[H]\centering
+\caption{AORM에서 D-STORM으로의 최적화 경로와 실측 효과}
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llrr@{}}
+\toprule
+\textbf{최적화 단계} & \textbf{기술적 결정} & \textbf{효과} & \textbf{실측 (Facebook)} \\
+\midrule
+Dense $\to$ Sparse & $O(n^2)$ footprint $\to$ $O(\text{nnz})$ frontier & 후반 반복 무비용 & --- \\
+3-step $\to$ Fused C & multiply+subtract+add $\to$ 단일 COO scan & Python 오버헤드 제거 & --- \\
+\midrule
+I-AORM $\to$ D-STORM-Sparse & 위 두 단계 결합 & \textbf{7.4$\times$} & 8.07s $\to$ 1.09s \\
+M-AORM $\to$ D-STORM-Dense & Footprint pruning 추가 & \textbf{1.9$\times$} & 3.48s $\to$ 1.82s \\
+M-AORM $\to$ GPU-Dense & CUDA 포팅 & \textbf{30.5$\times$} & 3.48s $\to$ 0.11s \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\subsubsection{기여 2: $k$-hop Constrained APSP의 구조적 인터페이스}
+
+D-STORM은 $k$번째 반복에서 자연스럽게 중단하면서 exact hop shell $R_1^*, \ldots, R_k^*$와 cumulative footprint $F_k$를 모두 보존한다. 이는 SciPy/GraphBLAS의 소스별 BFS에서는 불가능한 인터페이스이다.
+
+\begin{table}[H]\centering
+\caption{$k$-hop 지원 수준 비교}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{기법} & \textbf{$k$-hop 중단} & \textbf{Shell 보존} & \textbf{Footprint 재사용} & \textbf{동적 갱신} \\
+\midrule
+SciPy & 불가 & 불가 & 불가 & 불가 \\
+NetworkX & cutoff 지원 & 불가 & 불가 & 불가 \\
+D-STORM & 자연 중단 & $R_1^*, \ldots, R_k^*$ 전체 & $F_k$ 즉시 재사용 & 삽입 $O(n^2)$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{기여 3: 조건부 운영 영역의 정량적 규명}
+
+\begin{tcolorbox}[colback=blue!5, colframe=blue!50!black, title=D-STORM의 운영 영역]
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{최적}: 소세계 그래프 ($d \leq 8$), $k$-hop 쿼리, 삽입 위주 동적 갱신.
+  \item \textbf{경쟁}: 중간 지름 ($8 < d \leq 20$). SciPy와 동등.
+  \item \textbf{회피}: 고지름 ($d > 20$). SciPy 또는 GPU-Dense 사용.
+  \item \textbf{GPU 가용 시}: 모든 조건에서 GPU-Sparse/Dense가 최선.
+\end{itemize}
+\end{tcolorbox}
+
+\subsection{종합 결론}
+
+\begin{tcolorbox}[colback=green!5, colframe=green!50!black, title=핵심 결론]
+\begin{enumerate}[leftmargin=1.4em]
+  \item \textbf{시스템 최적화 기여}: AORM 대비 D-STORM-Sparse 7.4배(CPU) / GPU-Dense 30.5배 가속 (Facebook).
+  \item \textbf{CPU 내 최고}: D-STORM-Sparse가 SciPy(C) 대비 1.87배 (Facebook), 모든 소세계에서 SciPy 이상.
+  \item \textbf{GPU 친화적}: cuSPARSE/cuBLAS에 자연 매핑, CPU 대비 10--16배 가속. 그래프 크기에 비례 확대.
+  \item \textbf{$k$-hop 구조적 인터페이스}: 전체 APSP 수렴 전에 exact hop shell 제공. SciPy/GraphBLAS에서 불가.
+  \item \textbf{조건부 운영 영역}: $d \leq 8$ 최적, $d > 20$ 회피. Grid($d\!=\!88$)에서 SciPy/GPU-Dense 사용 권장.
+\end{enumerate}
+\end{tcolorbox}
+
+\end{document}

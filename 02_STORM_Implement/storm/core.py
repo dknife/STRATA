@@ -27,6 +27,10 @@ class SparseStormIterator:
     This is the sparse equivalent of AORM's AormIterator with
     shortest_only=True, achieving O(nnz) space instead of O(n^2).
 
+    Uses a dense Boolean footprint (uint8) for O(1) lookup + in-place
+    update, avoiding 3-step sparse intermediate matrix creation.
+    When the Cython fused kernel is available, it is used instead.
+
     Args:
         A: Adjacency matrix in scipy.sparse CSR format.
         k: Maximum reachability order. -1 for convergence-based stopping.
@@ -44,9 +48,18 @@ class SparseStormIterator:
         self.Rk = A_csr.copy()
         self.Rk.data[:] = 1.0
 
-        # Footprint F = I + R^(1): tracks all discovered reachable pairs
-        self.F = sp.eye(self.n, format='csr', dtype=np.float32) + self.Rk
-        self.F.data = np.minimum(self.F.data, 1.0)  # clamp to boolean
+        # Dense Boolean footprint for O(1) lookup (fused pruning path)
+        self.F_dense = np.zeros((self.n, self.n), dtype=np.uint8)
+        np.fill_diagonal(self.F_dense, 1)
+        Rk_coo = self.Rk.tocoo()
+        self.F_dense[Rk_coo.row, Rk_coo.col] = 1
+
+        # Try to load Cython fused kernel
+        try:
+            from storm._storm_core import fused_prune_and_update
+            self._fused_prune = fused_prune_and_update
+        except ImportError:
+            self._fused_prune = None
 
         self.power = 1
         self.maxpower = k
@@ -63,29 +76,36 @@ class SparseStormIterator:
 
         # Step 1: Sparse matrix multiply A @ R^(k-1)*
         new_R = self.A.dot(self.Rk)
-
-        # Step 2: Heaviside — booleanize nonzeros
         new_R = new_R.tocsr()
-        new_R.data[:] = 1.0
 
-        # Step 3: Path pruning — remove already-discovered paths
-        # R^(k)* = H(A @ R^(k-1)*) AND NOT F
-        # Implemented as: new_R - new_R .* F, then eliminate zeros
-        already_found = new_R.multiply(self.F)
-        Rk_star = new_R - already_found
-        Rk_star.eliminate_zeros()
+        if self._fused_prune is not None:
+            # Cython fused path: single C pass
+            out_rows, out_cols, nnz_out = self._fused_prune(
+                new_R, self.F_dense, self.n)
+            if nnz_out == 0:
+                raise StopIteration
+            Rk_star = sp.csr_matrix(
+                (np.ones(nnz_out, dtype=np.float32),
+                 (out_rows.astype(np.intc), out_cols.astype(np.intc))),
+                shape=(self.n, self.n))
+        else:
+            # NumPy vectorized path: COO extract → dense mask → filter
+            coo = new_R.tocoo()
+            rows, cols = coo.row, coo.col
+            # Vectorized footprint lookup (no Python loop)
+            mask = self.F_dense[rows, cols] == 0
+            new_rows = rows[mask]
+            new_cols = cols[mask]
+            if len(new_rows) == 0:
+                raise StopIteration
+            # Update footprint in-place
+            self.F_dense[new_rows, new_cols] = 1
+            Rk_star = sp.csr_matrix(
+                (np.ones(len(new_rows), dtype=np.float32),
+                 (new_rows, new_cols)),
+                shape=(self.n, self.n))
 
-        # Step 4: Convergence check (after pruning)
-        if Rk_star.nnz == 0:
-            raise StopIteration
-
-        # Step 5: Update footprint
-        self.F = self.F + Rk_star
-        self.F.data = np.minimum(self.F.data, 1.0)
-
-        # Store for next iteration
         self.Rk = Rk_star
-
         return Rk_star, self.power
 
 

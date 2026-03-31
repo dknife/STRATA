@@ -1,0 +1,5 @@
+suitesparse-graphblas>=10.0
+numpy>=1.21
+scipy>=1.7
+networkx>=3.0
+tqdm>=4.60

@@ -198,6 +198,93 @@
       "correctness": 1.0
     }
   ],
+  "exp7_graphblas_facebook": {
+    "n": 4039,
+    "m": 176468,
+    "STORM": 1.548,
+    "GB_frontier": 1.865,
+    "GB_bfs": 4.041,
+    "SciPy": 1.841,
+    "NX": 13.669,
+    "correct": true,
+    "note": "3-run min, Python 3.14, SuiteSparse:GraphBLAS 10.3.1, Windows 11"
+  },
+  "exp7_graphblas_ba_scale": [
+    {
+      "n": 500,
+      "m": 4950,
+      "STORM": 0.0173,
+      "GB_frontier": 0.0337,
+      "GB_bfs": 0.1032,
+      "SciPy": 0.0162
+    },
+    {
+      "n": 1000,
+      "m": 9950,
+      "STORM": 0.081,
+      "GB_frontier": 0.1213,
+      "GB_bfs": 0.319,
+      "SciPy": 0.0687
+    },
+    {
+      "n": 2000,
+      "m": 19950,
+      "STORM": 0.3283,
+      "GB_frontier": 0.4666,
+      "GB_bfs": 1.1084,
+      "SciPy": 0.2941
+    },
+    {
+      "n": 3000,
+      "m": 29950,
+      "STORM": 0.7597,
+      "GB_frontier": 1.0874,
+      "GB_bfs": 2.503,
+      "SciPy": 0.6907
+    }
+  ],
+  "exp7_graphblas_topologies": [
+    {
+      "topo": "BA",
+      "n": 2000,
+      "diam": 5,
+      "STORM": 0.327,
+      "GB_frontier": 0.459,
+      "SciPy": 0.292
+    },
+    {
+      "topo": "ER",
+      "n": 2000,
+      "diam": 6,
+      "STORM": 0.38,
+      "GB_frontier": 0.468,
+      "SciPy": 0.298
+    },
+    {
+      "topo": "WS",
+      "n": 2000,
+      "diam": 13,
+      "STORM": 0.379,
+      "GB_frontier": 0.484,
+      "SciPy": 0.276
+    },
+    {
+      "topo": "Grid",
+      "n": 2025,
+      "diam": 88,
+      "STORM": 3.209,
+      "GB_frontier": 0.573,
+      "SciPy": 0.149
+    },
+    {
+      "topo": "PLC",
+      "n": 2000,
+      "diam": 5,
+      "STORM": 0.326,
+      "GB_frontier": 0.457,
+      "SciPy": 0.291
+    }
+  ],
   "exp6_dynamic": [
     {
       "n": 500,
@@ -219,6 +306,60 @@
       "add_avg_pairs": 91.5,
       "full_ms": 283.7,
       "speedup": 33.3
+    }
+  ],
+  "exp8_gpu_facebook": {
+    "n": 4039,
+    "m": 176468,
+    "GPU_Dense": 0.148,
+    "GPU_Sparse": 0.161,
+    "CPU_STORM": 1.492,
+    "SciPy": 1.827,
+    "NX": 12.677,
+    "correct": true,
+    "gpu": "NVIDIA GeForce RTX 5080",
+    "note": "3-run min after 1 warmup, CuPy 14.0.1, CUDA 12.9"
+  },
+  "exp8_gpu_ba_scale": [
+    {
+      "n": 500,
+      "GPU_Dense": 0.002,
+      "GPU_Sparse": 0.01,
+      "CPU_STORM": 0.015,
+      "SciPy": 0.016,
+      "gpu_speedup": 9.9
+    },
+    {
+      "n": 1000,
+      "GPU_Dense": 0.006,
+      "GPU_Sparse": 0.013,
+      "CPU_STORM": 0.079,
+      "SciPy": 0.069,
+      "gpu_speedup": 12.4
+    },
+    {
+      "n": 2000,
+      "GPU_Dense": 0.028,
+      "GPU_Sparse": 0.022,
+      "CPU_STORM": 0.323,
+      "SciPy": 0.292,
+      "gpu_speedup": 14.5
+    },
+    {
+      "n": 3000,
+      "GPU_Dense": 0.068,
+      "GPU_Sparse": 0.039,
+      "CPU_STORM": 0.732,
+      "SciPy": 0.677,
+      "gpu_speedup": 18.7
+    },
+    {
+      "n": 5000,
+      "GPU_Dense": 0.205,
+      "GPU_Sparse": 0.097,
+      "CPU_STORM": 2.187,
+      "SciPy": 1.966,
+      "gpu_speedup": 22.7
     }
   ]
 }

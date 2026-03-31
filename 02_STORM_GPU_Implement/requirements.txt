@@ -1,0 +1,10 @@
+cupy-cuda12x>=13.0
+numpy>=1.21
+scipy>=1.7
+networkx>=3.0
+tqdm>=4.60
+nvidia-cuda-runtime-cu12
+nvidia-cuda-nvrtc-cu12
+nvidia-cublas-cu12
+nvidia-cusparse-cu12
+nvidia-nvjitlink-cu12

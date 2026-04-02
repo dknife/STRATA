@@ -24,7 +24,7 @@
 \definecolor{newbest}{HTML}{D4AC0D}
 
 \title{\LARGE\textbf{APSP 기법 통합 비교 보고서} \\[0.5em]
-  \large 11 Methods $\times$ 6 Datasets --- guard+CAS 커널 수정 반영}
+  \large 12 Methods $\times$ 6 Datasets + 스케일링 분석}
 \author{STORM Project}
 \date{2026년 4월 2일}
 
@@ -35,79 +35,44 @@
 \section{실험 개요}
 %======================================================================
 
-본 보고서는 11종의 APSP 기법을 6개 그래프에서 비교한 결과를 기록한다. 이전 보고서(4월 1일) 대비 TG2 D-STORM-CUDA의 footprint 체크를 non-atomic에서 \textbf{guard+CAS}로 수정하여 race condition을 제거하고, 성능 변화를 재측정하였다.
-
-\subsection{TG2 커널 수정 사항}
-\begin{tcolorbox}[colback=blue!3, colframe=blue!50!black, title=guard+CAS 패턴 (2026-04-02 적용)]
-기존 non-atomic 체크는 두 스레드가 같은 $F[i \cdot n + k]$를 동시에 0으로 읽어 중복 출력을 발생시킬 수 있었다. 대규모 그래프에서 중복 frontier가 출력 버퍼($n^2$)를 초과하면 \textbf{메모리 오버플로우} 위험이 있다.
-
-\medskip
-\textbf{수정}: non-atomic read guard + \texttt{atomicCAS}로 교체.
-\begin{verbatim}
-  if (F[idx] == 0) {                  // non-atomic guard: 이미 1이면 skip
-      if (atomicCAS(&F[idx], 0, 1) == 0) {  // CAS로 원자적 갱신
-          int pos = atomicAdd(out_count, 1);
-          out_row[pos] = i;
-          out_col[pos] = k;
-      }
-  }
-\end{verbatim}
+본 보고서는 12종의 APSP 기법을 6개 그래프에서 비교하고, GPU 4기법의 대규모 스케일링을 분석한다. 이전 보고서(11종) 대비 다음이 변경되었다:
 \begin{itemize}[leftmargin=1.4em]
-  \item \textbf{정확성}: CAS가 중복 출력을 원천 차단 (모든 그래프 PASS).
-  \item \textbf{성능}: non-atomic read guard가 이미 방문한 셀($F=1$)에서 atomic을 건너뛰어 contention 회피. Facebook(n=4,039)에서 \texttt{atomicExch} 대비 \textbf{38\% 빠름}, non-atomic 대비 동등.
+  \item BG2 DAWN-SOVM 추가: DAWN(ICS 2024)의 frontier-driven BFS 재구현.
+  \item TG1 D-STORM-DAWNiBFS 추가: DAWN + iBFS(SIGMOD 2016) 비트 압축을 D-STORM에 결합.
+  \item TG1 D-STORM-cuBLAS 제거: $O(n^3)$ 시간 복잡도로 모든 조건에서 열세.
 \end{itemize}
-\end{tcolorbox}
 
 \subsection{프로토콜}
 \begin{itemize}[leftmargin=1.4em]
-  \item \textbf{측정 횟수}: 3회 실행, 최소값 보고.
-  \item \textbf{GPU warmup}: GPU 기법은 1회 사전 실행 후 측정 시작.
-  \item \textbf{정확성 검증}: 모든 기법의 거리 행렬을 원소별 비교 (\textbf{11종 전부 PASS}).
-  \item \textbf{총 측정점}: 11 methods $\times$ 6 datasets = 66건 (TC3는 BC5와의 GraphBLAS 초기화 충돌로 별도 프로세스에서 측정).
+  \item \textbf{측정}: 3회 실행, 최소값 보고. GPU 1회 warmup.
+  \item \textbf{정확성}: 12종 전부 거리 행렬 원소별 비교 \textbf{PASS}.
+  \item \textbf{TC3}: BC5와 GraphBLAS 초기화 충돌로 별도 프로세스 측정.
 \end{itemize}
+
+%======================================================================
+\section{핵심 연산 용어 해설}
+%======================================================================
+
+\begin{tcolorbox}[colback=gray!3, colframe=gray!60!black, title=용어 해설, breakable]
+\begin{description}[style=nextline, leftmargin=1.2em, labelwidth=0em, font=\bfseries]
+\item[Edge-wise 연산] 행렬곱 없이 각 정점의 이웃을 직접 순회하여 도달 가능성을 갱신. I-AORM(BC3)에서 사용. GPU에서 CSR 이웃 순회(TG2, BG1)가 본질적으로 edge-wise.
+\item[BLAS matmul] CPU 최적화 행렬곱 (SIMD, 캐시 블로킹). M-AORM(BC4), D-STORM-NumpyBLAS(TC2).
+\item[SpMM] 희소 행렬곱. 비영 원소만 처리. D-STORM-SpMM-Cython(TC1)의 핵심.
+\item[Cython fused prune] SpMM 출력의 COO 스캔, footprint 체크, 갱신을 단일 C 패스로 융합. TC1의 핵심 최적화.
+\item[GrB\_vxm / GrB\_mxm] GraphBLAS의 벡터-행렬/행렬-행렬 곱. BC5(per-source BFS), TC3(D-STORM frontier 확장).
+\item[CUDA CSR 직접 확장] frontier의 각 $(i,j)$를 CUDA 스레드가 $j$의 CSR 이웃을 직접 순회. SpMM의 세 가지 병목 제거. TG2.
+\item[guard+CAS] non-atomic read로 방문 셀을 건너뛴 뒤, \texttt{atomicCAS}로 원자적 $0 \to 1$ 전이. TG2의 footprint 갱신.
+\item[DAWN SOVM] Sparse Optimized Vector-Matrix Operation. frontier 정점만 확장하여 방문 완료 정점의 이웃 탐색을 건너뜀. BG2. Feng et al., ICS 2024.
+\item[iBFS 비트 압축] 32개 소스의 frontier를 uint32 워드로 압축. 정점 $j$의 이웃을 1회 탐색하면서 bitwise OR로 32개 소스에 동시 배포. TG1에서 DAWN과 결합. Liu \& Huang, SIGMOD 2016.
+\end{description}
+\end{tcolorbox}
 
 %======================================================================
 \section{벤치마킹 대상 기법}
 %======================================================================
 
-\begin{tcolorbox}[colback=gray!3, colframe=gray!60!black, title=핵심 연산 용어 해설, breakable]
-\begin{description}[style=nextline, leftmargin=1.2em, labelwidth=0em, font=\bfseries]
-
-\item[Edge-wise 연산]
-행렬곱을 사용하지 않고, 각 정점 $u$의 이웃 목록을 순회하며 도달 가능성 행 $R[u,:]$를 직접 갱신하는 방식. I-AORM(BC3)에서 사용. Python 루프로 구현되어 느리지만, 알고리즘 구조가 단순하여 GPU에서 부활한다 (TG2, BG1의 CSR 이웃 순회가 본질적으로 edge-wise).
-
-\item[BLAS matmul (Basic Linear Algebra Subprograms)]
-CPU에서 고도로 최적화된 행렬곱 라이브러리. NumPy의 \texttt{A.dot(B)}가 내부적으로 호출하며, SIMD 벡터 명령어와 캐시 블로킹으로 $O(n^3)$ 연산을 가속한다. M-AORM(BC4)과 D-STORM-NumpyBLAS(TC2)에서 dense 행렬곱의 핵심 엔진.
-
-\item[GrB\_vxm (GraphBLAS Vector-Matrix Multiply)]
-GraphBLAS API의 벡터--행렬 곱 연산. 하나의 소스 벡터(frontier)를 인접 행렬과 곱하여 1-hop 이웃을 확장한다. GB-bfs(BC5)에서 소스별 BFS의 핵심 연산으로, $n$회 반복 호출하여 APSP를 구한다.
-
-\item[SpMM (Sparse Matrix--Matrix Multiply)]
-희소 행렬 간의 행렬곱. 0이 아닌 원소만 처리하여 dense matmul의 $O(n^3)$을 실제 비영 원소 수에 비례하는 비용으로 줄인다. D-STORM-SpMM-Cython(TC1)에서 SciPy CSR SpMM을, 기존 GPU-Sparse에서 cuSPARSE SpMM을 사용. D-STORM의 반복적 frontier 확장의 핵심이나, 이미 방문한 쌍까지 계산하는 구조적 비효율이 존재한다.
-
-\item[Cython]
-Python 코드를 C로 컴파일하는 트랜스파일러. TC1에서 SpMM 출력의 COO 스캔과 footprint 갱신을 단일 C 패스로 융합(fused prune)하여, Python 루프 대비 수십 배 가속한다. 3단계 sparse 연산(booleanize $\to$ prune $\to$ footprint update)을 1-pass로 통합하는 핵심 최적화.
-
-\item[NumPy BLAS]
-NumPy가 제공하는 dense 행렬 연산 인터페이스. 내부적으로 BLAS/LAPACK을 호출하며, TC2에서 $A \cdot R_k$ 행렬곱과 Heaviside pruning에 사용. 희소성을 활용하지 못해 고지름 그래프에서 반복 횟수에 비례하여 성능이 저하된다.
-
-\item[GrB\_mxm (GraphBLAS Matrix-Matrix Multiply)]
-GraphBLAS API의 행렬--행렬 곱 연산. 사용자 정의 세미링(semiring)을 지정할 수 있어, TC3에서는 LOR\_LAND 세미링과 구조적 보수 마스크(complement mask)를 결합하여 D-STORM의 frontier 확장 + pruning을 단일 호출로 수행한다.
-
-\item[cuBLAS matmul]
-NVIDIA GPU에서 실행되는 BLAS 행렬곱 라이브러리. FP32 Tensor Core를 활용하여 dense 행렬곱을 GPU에서 수행한다. TG1에서 $A \cdot R_k$를 GPU dense matmul로 처리. CPU BLAS 대비 수배 빠르나, $O(n^3)$ 구조는 동일하여 Tier~1(TG2/BG1) 대비 느리다.
-
-\item[CUDA CSR 직접 확장]
-cuSPARSE SpMM을 제거하고, frontier의 각 엔트리 $(i,j)$를 CUDA 스레드에 할당하여 $j$의 CSR 이웃을 직접 순회하는 커스텀 커널. TG2에서 사용. SpMM의 세 가지 병목(불필요한 곱 계산, 중간 행렬 생성, 별도 prune 단계)을 제거하여 6--18배 개선을 달성한다.
-
-\item[guard+CAS (Compare-And-Swap)]
-CUDA 커널에서 공유 데이터의 원자적 갱신을 위한 2단계 패턴. 먼저 \textbf{non-atomic read}로 이미 1인 셀을 빠르게 건너뛴 뒤(guard), 0인 셀에 대해서만 \texttt{atomicCAS(\&F[idx], 0, 1)}로 원자적 $0 \to 1$ 전이를 수행한다. 순수 atomic(\texttt{atomicExch}) 대비 contention을 대폭 줄이면서 중복 출력을 완전히 방지한다. TG2의 footprint 갱신에 적용.
-
-\end{description}
-\end{tcolorbox}
-
 \begin{table}[H]\centering
-\caption{11종 APSP 기법의 분류와 핵심 특성}
+\caption{12종 APSP 기법 분류}
 \label{tab:methods}
 \small
 \resizebox{\textwidth}{!}{%
@@ -121,123 +86,25 @@ BC3 & I-AORM & CPU Baseline & edge-wise 행 합산 & AORM 증분 & CPU (Python) 
 BC4 & M-AORM & CPU Baseline & dense BLAS matmul & AORM matmul & CPU (BLAS) \\
 BC5 & GB-bfs & CPU Baseline & GrB\_vxm masked BFS & per-source BFS & CPU (C) \\
 \midrule
-TC1 & D-STORM-SpMM-Cython & D-STORM CPU & SciPy SpMM + Cython prune & frontier + footprint & CPU (Cython C) \\
+TC1 & D-STORM-SpMM-Cython & D-STORM CPU & SciPy SpMM + Cython fused prune & frontier + footprint & CPU (Cython C) \\
 TC2 & D-STORM-NumpyBLAS & D-STORM CPU & NumPy BLAS + Heaviside & frontier + footprint & CPU (BLAS) \\
 TC3 & D-STORM-GraphBLAS & D-STORM CPU & GrB\_mxm + complement mask & frontier + footprint & CPU (C) \\
 \midrule
-\rowcolor{newbest!15} BG1 & GPU-PerSrc-BFS & \textbf{GPU Baseline} & CUDA block-per-source BFS & \textbf{per-source BFS} & GPU (CUDA) \\
+\rowcolor{newbest!15} BG1 & GPU-PerSrc-BFS & GPU Baseline & CUDA block-per-source BFS & per-source BFS & GPU (CUDA) \\
+\rowcolor{newbest!10} BG2 & DAWN-SOVM & GPU Baseline & CUDA frontier-driven BFS & per-source BFS & GPU (CUDA) \\
 \midrule
-TG1 & D-STORM-cuBLAS & D-STORM GPU & cuBLAS matmul & frontier + footprint & GPU (cuBLAS) \\
-\rowcolor{newbest!15} TG2 & D-STORM-CUDA & \textbf{D-STORM GPU} & \textbf{CUDA CSR 직접 확장 (guard+CAS)} & frontier + footprint & GPU (CUDA) \\
-\bottomrule
-\end{tabular}}
-\end{table}
-
-\begin{table}[H]\centering
-\caption{11종 APSP 기법의 알고리즘·구현·병목 상세 비교}
-\label{tab:method-detail}
-\scriptsize
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{@{}cl p{3.0cm} p{3.2cm} p{2.4cm} p{3.0cm} p{3.0cm}@{}}
-\toprule
-\textbf{ID} & \textbf{기법명} & \textbf{알고리즘} & \textbf{핵심 연산 내용} & \textbf{구현 도구} & \textbf{핵심 계산 병목} & \textbf{효율화 중심 요소} \\
-\midrule
-\multicolumn{7}{@{}l}{\textit{CPU Baseline Methods}} \\
-\midrule
-BC1 & NetworkX
-  & 소스별 레벨 동기 BFS ($n$회 순차)
-  & 인접 리스트 순회, visited dict 관리
-  & Python 인터프리터
-  & Python 루프 오버헤드; dict 해시 비용
-  & 없음 (참조 구현) \\
-\addlinespace
-BC2 & SciPy
-  & 소스별 C BFS ($n$회 순차)
-  & CSR \texttt{indptr/indices} 직접 순회, 큐 기반 BFS
-  & C 컴파일 코드
-  & $n$회 순차 BFS; 소스 간 병렬화 없음
-  & C 네이티브 루프; CSR 캐시 친화적 접근 \\
-\addlinespace
-BC3 & I-AORM
-  & AORM 증분 (edge-wise)
-  & 각 노드의 이웃 행 합산: $\text{temp}[u,:] = \sum R_k[\text{neigh}(u),:]$
-  & NumPy (Python 루프)
-  & Python \texttt{for} 루프 $\times n$ 노드; dense $n^2$ Heaviside
-  & 이웃 리스트 사전 계산 \\
-\addlinespace
-BC4 & M-AORM
-  & AORM matmul (BLAS)
-  & dense 행렬곱 $A \cdot R_k$ + Heaviside pruning
-  & NumPy BLAS (SIMD)
-  & $O(n^3)$ dense matmul $\times d$회 반복; 희소성 미활용
-  & BLAS SIMD 가속 \\
-\addlinespace
-BC5 & GB-bfs
-  & 소스별 masked BFS (GraphBLAS)
-  & \texttt{GrB\_vxm} + 구조적 보수 마스크로 frontier 확장
-  & SuiteSparse C (CFFI)
-  & Python$\to$C 호출 $\times n$ 소스; 결과 원소별 추출
-  & GraphBLAS 최적화 SpMV 커널 \\
-\midrule
-\multicolumn{7}{@{}l}{\textit{D-STORM CPU Variants}} \\
-\midrule
-TC1 & D-STORM-SpMM-Cython
-  & Sparse frontier + cumulative footprint pruning
-  & SciPy CSR SpMM ($A \cdot R_k$) $\to$ Cython COO scan: footprint $O(1)$ 조회 + 갱신
-  & SciPy SpMM + Cython C
-  & SpMM 출력 중 대부분이 prune됨; SpMM 자체 비용
-  & Cython fused prune: 3-step sparse 연산을 단일 C 패스로 통합 \\
-\addlinespace
-TC2 & D-STORM-NumpyBLAS
-  & Dense frontier + Heaviside pruning
-  & BLAS matmul $A \cdot R_k$ $\to$ $H(H(\text{temp}) - V)$
-  & NumPy BLAS
-  & $O(n^3)$ dense matmul $\times d$회; 고지름 시 반복 폭증
-  & BLAS matmul + 벡터화 Heaviside \\
-\addlinespace
-TC3 & D-STORM-GraphBLAS
-  & D-STORM 로직의 GraphBLAS 재구현
-  & \texttt{GrB\_mxm} (LOR\_LAND semiring) + 보수 마스크 $\to$ footprint 갱신
-  & SuiteSparse C (CFFI)
-  & CFFI 호출 오버헤드; \texttt{extractTuples} 결과 복사
-  & GraphBLAS 내부 fused SpMM+mask 최적화 \\
-\midrule
-\multicolumn{7}{@{}l}{\textit{GPU Baseline}} \\
-\midrule
-\rowcolor{newbest!10}
-BG1 & GPU-PerSrc-BFS
-  & 소스별 레벨 동기 BFS ($n$개 CUDA 블록 병렬)
-  & block당 1 소스: 스레드들이 CSR 정점 분담 스캔, \texttt{dist[v]==-1} 체크
-  & CuPy RawKernel
-  & 레벨당 $n$ 정점 전수 스캔 (frontier 크기와 무관한 고정 비용)
-  & 소스 간 완전 독립 (atomic 0); \texttt{dist} 배열이 visited/frontier/distance 겸용; 단일 커널 launch \\
-\midrule
-\multicolumn{7}{@{}l}{\textit{D-STORM GPU Variants}} \\
-\midrule
-TG1 & D-STORM-cuBLAS
-  & cuBLAS dense matmul + GPU Heaviside
-  & GPU dense $A \cdot R_k$ $\to$ elementwise pruning
-  & CuPy + cuBLAS
-  & $O(n^3)$ dense matmul $\times d$회; VRAM $O(n^2)$ 상수
-  & cuBLAS FP32 Tensor Core 활용 \\
-\addlinespace
-\rowcolor{newbest!10}
-TG2 & D-STORM-CUDA
-  & D-STORM frontier의 CUDA 직접 CSR 확장
-  & frontier COO의 각 $(i,j)$를 CSR 이웃 순회로 확장; guard+CAS footprint
-  & CuPy RawKernel
-  & \texttt{atomicAdd} (출력 카운터) 경합; hop당 커널 launch + frontier 복사
-  & SpMM 완전 제거; guard+CAS로 정확성 보장 + atomic contention 최소화 \\
+TG1 & D-STORM-DAWNiBFS & D-STORM GPU & 비트 압축 frontier 공유 (DAWN+iBFS) & frontier + footprint & GPU (CUDA) \\
+\rowcolor{newbest!10} TG2 & D-STORM-CUDA & D-STORM GPU & CUDA CSR 직접 확장 (guard+CAS) & frontier + footprint & GPU (CUDA) \\
 \bottomrule
 \end{tabular}}
 \end{table}
 
 %======================================================================
-\section{실험 데이터}
+\section{실험 데이터 및 환경}
 %======================================================================
 
 \begin{table}[H]\centering
-\caption{실험 그래프 상세 정보}
+\caption{실험 그래프}
 \label{tab:datasets}
 \small
 \begin{tabular}{@{}llrrrll@{}}
@@ -254,50 +121,34 @@ PLC-2000 & PL cluster & 2,000 & 19,926 & 5 & \texttt{powerlaw\_cluster(2000,5,0.
 \end{tabular}
 \end{table}
 
-%======================================================================
-\section{실험 환경}
-%======================================================================
-
-\begin{table}[H]\centering
-\caption{하드웨어 및 소프트웨어 사양}
-\small
-\begin{tabular}{@{}ll@{}}
-\toprule
-OS & Windows 11 Pro 10.0.26200 \\
-GPU & NVIDIA GeForce RTX 5080 (16,303 MiB VRAM) \\
-CUDA & 12.9 / CuPy 14.0.1 \\
-Python & 3.14.3 / NumPy 2.4.4 / SciPy 1.17.1 \\
-Cython & 3.2.4 / MSVC 14.44 \\
-GraphBLAS & SuiteSparse 10.3.1.0 (CFFI) \\
-\bottomrule
-\end{tabular}
-\end{table}
+\noindent\textbf{환경}: Windows 11 Pro, RTX 5080 (16GB), CUDA 12.9, CuPy 14.0.1, Python 3.14.3, NumPy 2.4.4, SciPy 1.17.1, Cython 3.2.4, SuiteSparse:GraphBLAS 10.3.1.
 
 %======================================================================
 \section{벤치마킹 결과}
 %======================================================================
 
-\subsection{Facebook 전체 비교 (11 methods)}
+\subsection{Facebook 전체 비교 (12 methods)}
 
 \begin{table}[H]\centering
-\caption{Facebook ($n\!=\!4{,}039$, $m\!=\!176{,}468$, $d\!=\!8$): 전체 11종 순위}
+\caption{Facebook ($n\!=\!4{,}039$): 전체 12종 순위}
 \label{tab:fb-all}
 \small
 \begin{tabular}{@{}rllrrr@{}}
 \toprule
 \textbf{\#} & \textbf{ID} & \textbf{기법} & \textbf{시간 (s)} & \textbf{vs SciPy} & \textbf{vs NX} \\
 \midrule
-\rowcolor{newbest!15} 1 & BG1 & GPU-PerSrc-BFS & \textbf{0.019} & 101.1$\times$ & 748$\times$ \\
-\rowcolor{newbest!10} 2 & TG2 & D-STORM-CUDA & 0.030 & 64.0$\times$ & 474$\times$ \\
-\rowcolor{gpucol!8} 3 & TG1 & D-STORM-cuBLAS & 0.155 & 12.4$\times$ & 92$\times$ \\
-\rowcolor{cpubest!5} 4 & TC1 & D-STORM-SpMM-Cython & 1.016 & 1.9$\times$ & 14$\times$ \\
-5 & TC2 & D-STORM-NumpyBLAS & 1.723 & 1.1$\times$ & 8$\times$ \\
-6 & TC3 & D-STORM-GraphBLAS & 1.897 & 1.0$\times$ & 7$\times$ \\
-7 & BC2 & SciPy & 1.921 & 1.0$\times$ & 7$\times$ \\
-8 & BC4 & M-AORM & 2.868 & 0.7$\times$ & 5$\times$ \\
-9 & BC5 & GB-bfs & 4.065 & 0.5$\times$ & 4$\times$ \\
-10 & BC3 & I-AORM & 7.489 & 0.3$\times$ & 2$\times$ \\
-11 & BC1 & NetworkX & 14.213 & 0.1$\times$ & 1$\times$ \\
+\rowcolor{newbest!15} 1 & BG1 & GPU-PerSrc-BFS & \textbf{0.016} & 122$\times$ & 880$\times$ \\
+\rowcolor{newbest!10} 2 & BG2 & DAWN-SOVM & 0.019 & 101$\times$ & 741$\times$ \\
+\rowcolor{gpucol!8} 3 & TG2 & D-STORM-CUDA & 0.028 & 68$\times$ & 503$\times$ \\
+4 & TG1 & D-STORM-DAWNiBFS & 0.247 & 7.8$\times$ & 57$\times$ \\
+\rowcolor{cpubest!5} 5 & TC1 & D-STORM-SpMM-Cython & 0.984 & 2.0$\times$ & 14$\times$ \\
+6 & TC2 & D-STORM-NumpyBLAS & 1.697 & 1.1$\times$ & 8$\times$ \\
+7 & TC3 & D-STORM-GraphBLAS & 1.921 & 1.0$\times$ & 7$\times$ \\
+8 & BC2 & SciPy & 1.918 & 1.0$\times$ & 7$\times$ \\
+9 & BC4 & M-AORM & 2.831 & 0.7$\times$ & 5$\times$ \\
+10 & BC5 & GB-bfs & 4.071 & 0.5$\times$ & 3$\times$ \\
+11 & BC3 & I-AORM & 8.693 & 0.2$\times$ & 2$\times$ \\
+12 & BC1 & NetworkX & 14.073 & 0.1$\times$ & 1$\times$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -305,239 +156,73 @@ GraphBLAS & SuiteSparse 10.3.1.0 (CFFI) \\
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}
-\node[anchor=south, draw=gray!50, rounded corners, fill=white, inner sep=4pt,
-  font=\scriptsize] at (5.8,8.0) {%
-  \tikz\fill[orange!35,draw=orange!60!black](0,0)rectangle(0.25,0.18); Baseline CPU\quad
-  \tikz\fill[blue!40,draw=blue!60!black](0,0)rectangle(0.25,0.18); D-STORM CPU\quad
-  \tikz\fill[purple!40,draw=purple!60!black](0,0)rectangle(0.25,0.18); D-STORM GPU\quad
-  \tikz\fill[yellow!50,draw=yellow!70!black](0,0)rectangle(0.25,0.18); GPU Baseline/DirectExpand%
-};
 \begin{axis}[
-  xbar, width=0.88\textwidth, height=9cm, bar width=8pt,
+  xbar, width=0.88\textwidth, height=9.5cm, bar width=7pt,
   xlabel={실행 시간 (초)},
-  symbolic y coords={BG1,TG2,TG1,TC1,TC2,TC3,BC2,BC4,BC5,BC3,BC1},
+  symbolic y coords={BG1,BG2,TG2,TG1,TC1,TC2,TC3,BC2,BC4,BC5,BC3,BC1},
   ytick=data,
-  yticklabels={GPU-PerSrc-BFS,D-STORM-CUDA,D-STORM-cuBLAS,
+  yticklabels={GPU-PerSrc-BFS,DAWN-SOVM,D-STORM-CUDA,D-STORM-DAWNiBFS,
     D-STORM-SpMM-Cython,D-STORM-NumpyBLAS,D-STORM-GraphBLAS,SciPy,M-AORM,GB-bfs,I-AORM,NetworkX},
   xmin=0, xmax=16,
-  enlarge y limits={abs=7pt},
+  enlarge y limits={abs=6pt},
   nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
   nodes near coords style={font=\scriptsize, anchor=west},
   y tick label style={font=\small},
 ]
 \addplot[fill=yellow!50, draw=yellow!70!black, forget plot]
-  coordinates {(0.019,BG1) (0.030,TG2)};
+  coordinates {(0.016,BG1) (0.019,BG2)};
 \addplot[fill=purple!40, draw=purple!60!black, bar shift=0pt, forget plot]
-  coordinates {(0.155,TG1)};
+  coordinates {(0.028,TG2) (0.247,TG1)};
 \addplot[fill=blue!40, draw=blue!60!black, bar shift=0pt, forget plot]
-  coordinates {(1.016,TC1) (1.723,TC2) (1.897,TC3)};
+  coordinates {(0.984,TC1) (1.697,TC2) (1.921,TC3)};
 \addplot[fill=orange!18, draw=orange!50!black, bar shift=0pt, forget plot]
-  coordinates {(1.921,BC2) (2.868,BC4) (4.065,BC5) (7.489,BC3) (14.213,BC1)};
+  coordinates {(1.918,BC2) (2.831,BC4) (4.071,BC5) (8.693,BC3) (14.073,BC1)};
 \end{axis}
 \end{tikzpicture}
-\caption{Facebook APSP 전체 11종 비교 (guard+CAS 적용 후).}
+\caption{Facebook APSP 12종 비교.}
 \label{fig:fb-bar}
 \end{figure}
 
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}
-\node[anchor=south, draw=gray!50, rounded corners, fill=white, inner sep=4pt,
-  font=\scriptsize] at (5.0,6.5) {%
-  \tikz\fill[orange!35,draw=orange!60!black](0,0)rectangle(0.25,0.18); Baseline\quad
-  \tikz\fill[blue!40,draw=blue!60!black](0,0)rectangle(0.25,0.18); D-STORM CPU%
-};
-\begin{axis}[
-  xbar, width=0.88\textwidth, height=7cm, bar width=9pt,
-  xlabel={실행 시간 (초)},
-  symbolic y coords={TC1,TC2,TC3,BC2,BC4,BC5,BC3,BC1},
-  ytick=data,
-  yticklabels={D-STORM-SpMM-Cython,D-STORM-NumpyBLAS,D-STORM-GraphBLAS,SciPy,M-AORM,GB-bfs,I-AORM,NetworkX},
-  xmin=0, xmax=16,
-  enlarge y limits={abs=8pt},
-  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
-  nodes near coords style={font=\scriptsize, anchor=west},
-  y tick label style={font=\small},
-]
-\addplot[fill=blue!40, draw=blue!60!black, forget plot]
-  coordinates {(1.016,TC1) (1.723,TC2) (1.897,TC3)};
-\addplot[fill=orange!18, draw=orange!50!black, bar shift=0pt, forget plot]
-  coordinates {(1.921,BC2) (2.868,BC4) (4.065,BC5) (7.489,BC3) (14.213,BC1)};
-\end{axis}
-\end{tikzpicture}
-\caption{Facebook APSP --- CPU 기법만 비교. D-STORM-SpMM-Cython(TC1)가 CPU 내 최고(1.016s), SciPy(1.921s) 대비 1.9배.}
-\label{fig:fb-cpu}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}
-\node[anchor=south, draw=gray!50, rounded corners, fill=white, inner sep=4pt,
-  font=\scriptsize] at (4.5,5.0) {%
-  \tikz\fill[yellow!50,draw=yellow!70!black](0,0)rectangle(0.25,0.18); GPU Baseline / DirectExpand\quad
-  \tikz\fill[purple!40,draw=purple!60!black](0,0)rectangle(0.25,0.18); D-STORM GPU%
-};
-\begin{axis}[
-  xbar, width=0.88\textwidth, height=5cm, bar width=10pt,
-  xlabel={실행 시간 (초)},
-  symbolic y coords={BG1,TG2,TG1},
-  ytick=data,
-  yticklabels={GPU-PerSrc-BFS (BG1),D-STORM-CUDA (TG2),D-STORM-cuBLAS (TG1)},
-  xmin=0, xmax=0.20,
-  enlarge y limits={abs=10pt},
-  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
-  nodes near coords style={font=\scriptsize, anchor=west},
-  y tick label style={font=\small},
-]
-\addplot[fill=yellow!50, draw=yellow!70!black, forget plot]
-  coordinates {(0.019,BG1) (0.030,TG2)};
-\addplot[fill=purple!40, draw=purple!60!black, bar shift=0pt, forget plot]
-  coordinates {(0.155,TG1)};
-\end{axis}
-\end{tikzpicture}
-\caption{Facebook APSP --- GPU 기법만 비교. BG1(0.019s)과 TG2(0.030s)가 D-STORM-cuBLAS(0.155s) 대비 5--8배 빠른 Tier~1 계층.}
-\label{fig:fb-gpu}
-\end{figure}
-
-\paragraph{핵심 발견.}
-\begin{itemize}[leftmargin=1.4em]
-  \item \textbf{CPU (Figure~\ref{fig:fb-cpu})}: D-STORM-SpMM-Cython(TC1, 1.016s)가 CPU 내 최고. SciPy(1.921s) 대비 1.9배. D-STORM-GraphBLAS(TC3, 1.897s)는 TC1 대비 1.9배 느림.
-  \item \textbf{GPU (Figure~\ref{fig:fb-gpu})}: BG1(0.019s)과 TG2(0.030s)가 Tier~1을 형성. D-STORM-cuBLAS(0.155s) 대비 \textbf{5--8배} 격차.
-  \item 전체적으로 GPU Tier~1이 CPU 최고(TC1) 대비 \textbf{34--53배} 빠름.
-\end{itemize}
-
-\subsection{위상별 전체 비교 ($n \approx 2{,}000$)}
+\subsection{위상별 비교 --- GPU 기법}
 
 \begin{table}[H]\centering
-\caption{위상별 비교: 전체 11종 (초, \textbf{볼드}=해당 위상 최고)}
-\label{tab:topo}
+\caption{위상별 GPU 4기법 (초, \textbf{볼드}=해당 위상 최고)}
+\label{tab:topo-gpu}
 \scriptsize
-\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}clrrrrrr@{}}
 \toprule
-\textbf{ID} & \textbf{기법} & \textbf{Facebook} & \textbf{BA} ($d\!=\!5$) & \textbf{WS} ($d\!=\!8$) & \textbf{ER} ($d\!=\!6$) & \textbf{Grid} ($d\!=\!88$) & \textbf{PLC} ($d\!=\!5$) \\
+\textbf{ID} & \textbf{기법} & \textbf{Facebook} & \textbf{BA} & \textbf{WS} & \textbf{ER} & \textbf{Grid} & \textbf{PLC} \\
 \midrule
-\rowcolor{newbest!12} BG1 & GPU-PerSrc-BFS & \textbf{0.019} & 0.006 & 0.006 & 0.006 & \textbf{0.007} & 0.006 \\
-\rowcolor{newbest!8} TG2 & D-STORM-CUDA & 0.030 & \textbf{0.005} & \textbf{0.004} & \textbf{0.005} & 0.013 & \textbf{0.005} \\
-\rowcolor{gpucol!6} TG1 & D-STORM-cuBLAS & 0.155 & 0.029 & 0.030 & 0.030 & 0.097 & 0.029 \\
-\rowcolor{cpubest!5} TC1 & D-STORM-SpMM-Cython & 1.016 & 0.284 & 0.291 & 0.316 & 0.135 & 0.281 \\
-TC2 & D-STORM-NumpyBLAS & 1.723 & 0.306 & 0.446 & 0.359 & \cellcolor{gridwarn!12}3.532 & 0.304 \\
-TC3 & D-STORM-GraphBLAS & 1.897 & 0.464 & 0.483 & 0.484 & 0.589 & 0.479 \\
-BC2 & SciPy & 1.921 & 0.312 & 0.291 & 0.314 & 0.167 & 0.313 \\
-BC4 & M-AORM & 2.868 & 0.430 & 0.621 & 0.501 & \cellcolor{gridwarn!12}5.276 & 0.412 \\
-BC5 & GB-bfs & 4.065 & 1.191 & 1.238 & 1.248 & 3.412 & 1.133 \\
-BC3 & I-AORM & 7.489 & 0.407 & 0.520 & 0.449 & \cellcolor{gridwarn!12}4.397 & 0.397 \\
-BC1 & NetworkX & 14.213 & 1.188 & 1.218 & 1.366 & 1.089 & 1.157 \\
+\rowcolor{newbest!12} BG1 & GPU-PerSrc-BFS & \textbf{0.016} & 0.006 & 0.005 & 0.006 & \textbf{0.006} & 0.003 \\
+\rowcolor{newbest!8} BG2 & DAWN-SOVM & 0.019 & 0.006 & 0.005 & 0.006 & 0.006 & \textbf{0.003} \\
+\rowcolor{gpucol!6} TG2 & D-STORM-CUDA & 0.028 & \textbf{0.005} & 0.008 & \textbf{0.005} & 0.016 & 0.005 \\
+TG1 & D-STORM-DAWNiBFS & 0.247 & 0.019 & \textbf{0.009} & 0.012 & 0.032 & 0.016 \\
 \bottomrule
-\end{tabular}}
+\end{tabular}
 \end{table}
 
+\subsection{위상별 비교 --- CPU 기법}
+
 \begin{table}[H]\centering
-\caption{위상별 비교 --- CPU 기법만 (초, \textbf{볼드}=해당 위상 CPU 최고)}
+\caption{위상별 CPU 8기법 (초, \textbf{볼드}=해당 위상 CPU 최고)}
 \label{tab:topo-cpu}
 \scriptsize
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}clrrrrrr@{}}
 \toprule
-\textbf{ID} & \textbf{기법} & \textbf{Facebook} & \textbf{BA} ($d\!=\!5$) & \textbf{WS} ($d\!=\!8$) & \textbf{ER} ($d\!=\!6$) & \textbf{Grid} ($d\!=\!88$) & \textbf{PLC} ($d\!=\!5$) \\
+\textbf{ID} & \textbf{기법} & \textbf{Facebook} & \textbf{BA} & \textbf{WS} & \textbf{ER} & \textbf{Grid} & \textbf{PLC} \\
 \midrule
-\rowcolor{cpubest!8} TC1 & D-STORM-SpMM-Cython & \textbf{1.016} & \textbf{0.284} & \textbf{0.291} & \textbf{0.316} & \textbf{0.135} & \textbf{0.281} \\
-TC2 & D-STORM-NumpyBLAS & 1.723 & 0.306 & 0.446 & 0.359 & \cellcolor{gridwarn!12}3.532 & 0.304 \\
-TC3 & D-STORM-GraphBLAS & 1.897 & 0.464 & 0.483 & 0.484 & 0.589 & 0.479 \\
-BC2 & SciPy & 1.921 & 0.312 & 0.291 & 0.314 & 0.167 & 0.313 \\
-BC4 & M-AORM & 2.868 & 0.430 & 0.621 & 0.501 & \cellcolor{gridwarn!12}5.276 & 0.412 \\
-BC3 & I-AORM & 7.489 & 0.407 & 0.520 & 0.449 & \cellcolor{gridwarn!12}4.397 & 0.397 \\
-BC5 & GB-bfs & 4.065 & 1.191 & 1.238 & 1.248 & 3.412 & 1.133 \\
-BC1 & NetworkX & 14.213 & 1.188 & 1.218 & 1.366 & 1.089 & 1.157 \\
+\rowcolor{cpubest!8} TC1 & D-STORM-SpMM-Cython & \textbf{0.984} & \textbf{0.277} & \textbf{0.290} & \textbf{0.300} & \textbf{0.159} & \textbf{0.284} \\
+TC2 & D-STORM-NumpyBLAS & 1.697 & 0.301 & 0.441 & 0.343 & \cellcolor{gridwarn!12}3.633 & 0.312 \\
+TC3 & D-STORM-GraphBLAS & 1.921 & 0.472 & 0.493 & 0.483 & 0.590 & 0.471 \\
+BC2 & SciPy & 1.918 & 0.309 & 0.291 & 0.314 & 0.161 & 0.313 \\
+BC4 & M-AORM & 2.831 & 0.401 & 0.579 & 0.467 & \cellcolor{gridwarn!12}5.434 & 0.390 \\
+BC5 & GB-bfs & 4.071 & 1.144 & 1.258 & 1.176 & 3.590 & 1.188 \\
+BC3 & I-AORM & 8.693 & 0.393 & 0.512 & 0.430 & \cellcolor{gridwarn!12}4.461 & 0.397 \\
+BC1 & NetworkX & 14.073 & 1.147 & 1.218 & 1.366 & 1.031 & 1.220 \\
 \bottomrule
 \end{tabular}}
 \end{table}
-
-\begin{table}[H]\centering
-\caption{위상별 비교 --- GPU 기법만 (초, \textbf{볼드}=해당 위상 GPU 최고)}
-\label{tab:topo-gpu}
-\scriptsize
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{@{}clrrrrrr@{}}
-\toprule
-\textbf{ID} & \textbf{기법} & \textbf{Facebook} & \textbf{BA} ($d\!=\!5$) & \textbf{WS} ($d\!=\!8$) & \textbf{ER} ($d\!=\!6$) & \textbf{Grid} ($d\!=\!88$) & \textbf{PLC} ($d\!=\!5$) \\
-\midrule
-\rowcolor{newbest!12} BG1 & GPU-PerSrc-BFS & \textbf{0.019} & 0.006 & 0.006 & 0.006 & \textbf{0.007} & 0.006 \\
-\rowcolor{newbest!8} TG2 & D-STORM-CUDA & 0.030 & \textbf{0.005} & \textbf{0.004} & \textbf{0.005} & 0.013 & \textbf{0.005} \\
-\rowcolor{gpucol!6} TG1 & D-STORM-cuBLAS & 0.155 & 0.029 & 0.030 & 0.030 & 0.097 & 0.029 \\
-\bottomrule
-\end{tabular}}
-\end{table}
-
-\paragraph{특이 사항.}
-\begin{itemize}[leftmargin=1.4em]
-  \item \textbf{CPU (Table~\ref{tab:topo-cpu})}: TC1이 \textbf{모든 그래프에서 CPU 최고}. SciPy 대비 소세계 1.0--1.9배, Grid 1.2배.
-  \item \textbf{CPU}: TC3 D-STORM-GraphBLAS는 TC1 대비 소세계 1.5--1.6배, Grid 4.4배 느림 --- CFFI 호출 오버헤드.
-  \item \textbf{GPU (Table~\ref{tab:topo-gpu})}: BG1과 TG2가 소세계에서 동등 (0.004--0.006s). Facebook/Grid에서는 BG1이 1.6--1.9배 우세.
-  \item \textbf{GPU vs CPU}: GPU 최고(BG1/TG2) 대비 CPU 최고(TC1)는 소세계에서 47--73배, Grid에서 19배 격차.
-\end{itemize}
-
-%======================================================================
-\section{성능 분석}
-%======================================================================
-
-\subsection{성능 계층 구조}
-
-\begin{tcolorbox}[colback=gray!5, colframe=gray!50!black, title=성능 계층 (전체 그래프 기준)]
-\textbf{Tier~1} BG1/TG2 (0.004--0.03s) $\gg$
-\textbf{Tier~2} TG1 (0.03--0.16s) $\gg$
-\textbf{Tier~3} TC1/BC2 (0.13--1.92s) $>$
-\textbf{Tier~4} TC2/TC3/BC4 (0.30--5.28s) $>$
-\textbf{Tier~5} BC1/BC3/BC5 (0.40--14.21s)
-\end{tcolorbox}
-
-\subsection{BG1 vs TG2: per-source BFS vs D-STORM 직접 확장}
-
-\begin{table}[H]\centering
-\caption{BG1 GPU-PerSrc-BFS vs TG2 D-STORM-CUDA 직접 비교}
-\label{tab:bg1-tg2}
-\small
-\begin{tabular}{@{}lrrrc@{}}
-\toprule
-\textbf{그래프} & $d$ & \textbf{BG1 (s)} & \textbf{TG2 (s)} & \textbf{BG1/TG2} \\
-\midrule
-Facebook & 8 & \textbf{0.019} & 0.030 & 0.63$\times$ (BG1 우세) \\
-BA-2000 & 5 & 0.006 & \textbf{0.005} & 1.18$\times$ (TG2 우세) \\
-WS-2000 & 8 & 0.006 & \textbf{0.004} & 1.34$\times$ (TG2 우세) \\
-ER-2000 & 6 & 0.006 & \textbf{0.005} & 1.31$\times$ (TG2 우세) \\
-\rowcolor{gridwarn!8} Grid & 88 & \textbf{0.007} & 0.013 & 0.54$\times$ (BG1 우세) \\
-PLC-2000 & 5 & 0.006 & \textbf{0.005} & 1.27$\times$ (TG2 우세) \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\paragraph{분석.}
-\begin{itemize}[leftmargin=1.4em]
-  \item \textbf{$n \approx 2{,}000$, 소세계}: TG2가 BG1보다 18--34\% 빠름. frontier COO의 엔트리 수가 적어 guard+CAS 오버헤드가 미미.
-  \item \textbf{$n = 4{,}039$ (Facebook)}: BG1이 1.6배 우세. $n$ 증가 시 BG1의 ``atomic 불필요'' 이점이 확대.
-  \item \textbf{$d = 88$ (Grid)}: BG1이 1.9배 우세. hop 수가 많으면 TG2의 반복 커널 launch 오버헤드가 누적.
-  \item \textbf{결론}: TG2는 소규모 소세계에서 우위, BG1은 대규모 또는 고지름에서 우위.
-\end{itemize}
-
-\subsection{guard+CAS의 효과 분석}
-
-\begin{table}[H]\centering
-\caption{TG2 footprint 체크 방식별 성능 비교 (Facebook, $n\!=\!4{,}039$)}
-\label{tab:guard-cas}
-\small
-\begin{tabular}{@{}lrrrl@{}}
-\toprule
-\textbf{방식} & \textbf{시간 (s)} & \textbf{frontier work} & \textbf{정확성} & \textbf{비고} \\
-\midrule
-non-atomic & 0.030 & 17,958K & OK\textsuperscript{*} & 중복 frontier 발생, 버퍼 오버플로우 위험 \\
-atomicExch & 0.041 & 16,309K & PASS & 정확, 그러나 contention으로 35\% 느림 \\
-atomicCAS & 0.041 & 16,309K & PASS & atomicExch와 동등 \\
-\textbf{guard+CAS} & \textbf{0.031} & \textbf{16,309K} & \textbf{PASS} & \textbf{정확 + non-atomic 동등 성능} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textsuperscript{*} non-atomic은 거리값 자체는 정확하나, 중복 frontier가 출력 버퍼($n^2$)를 초과할 수 있어 대규모 그래프에서 안전하지 않음.
 
 \subsection{전체 순위 (6개 그래프 총합)}
 
@@ -549,107 +234,139 @@ atomicCAS & 0.041 & 16,309K & PASS & atomicExch와 동등 \\
 \toprule
 \textbf{\#} & \textbf{ID} & \textbf{기법} & \textbf{총합 (s)} & \textbf{평균 (s)} \\
 \midrule
-\rowcolor{newbest!12} 1 & BG1 & GPU-PerSrc-BFS & \textbf{0.051} & 0.008 \\
-\rowcolor{newbest!8} 2 & TG2 & D-STORM-CUDA & 0.062 & 0.010 \\
-\rowcolor{gpucol!6} 3 & TG1 & D-STORM-cuBLAS & 0.369 & 0.062 \\
-4 & TC1 & D-STORM-SpMM-Cython & 2.323 & 0.387 \\
-5 & BC2 & SciPy & 3.316 & 0.553 \\
-6 & TC3 & D-STORM-GraphBLAS & 4.394 & 0.732 \\
-7 & TC2 & D-STORM-NumpyBLAS & 6.670 & 1.112 \\
-8 & BC4 & M-AORM & 10.107 & 1.685 \\
-9 & BC5 & GB-bfs & 12.288 & 2.048 \\
-10 & BC3 & I-AORM & 13.660 & 2.277 \\
-11 & BC1 & NetworkX & 20.231 & 3.372 \\
+\rowcolor{newbest!12} 1 & BG1 & GPU-PerSrc-BFS & \textbf{0.041} & 0.007 \\
+\rowcolor{newbest!8} 2 & BG2 & DAWN-SOVM & 0.045 & 0.008 \\
+\rowcolor{gpucol!6} 3 & TG2 & D-STORM-CUDA & 0.068 & 0.011 \\
+4 & TG1 & D-STORM-DAWNiBFS & 0.334 & 0.056 \\
+\rowcolor{cpubest!5} 5 & TC1 & D-STORM-SpMM-Cython & 2.293 & 0.382 \\
+6 & BC2 & SciPy & 3.305 & 0.551 \\
+7 & TC3 & D-STORM-GraphBLAS & 4.429 & 0.738 \\
+8 & TC2 & D-STORM-NumpyBLAS & 6.726 & 1.121 \\
+9 & BC4 & M-AORM & 10.102 & 1.684 \\
+10 & BC5 & GB-bfs & 12.428 & 2.071 \\
+11 & BC3 & I-AORM & 14.885 & 2.481 \\
+12 & BC1 & NetworkX & 20.054 & 3.342 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-  xbar, width=0.88\textwidth, height=8cm, bar width=9pt,
-  xlabel={6개 그래프 총합 실행 시간 (초)},
-  symbolic y coords={BG1,TG2,TG1,TC1,BC2,TC3,TC2,BC4,BC5,BC3,BC1},
-  ytick=data,
-  yticklabels={GPU-PerSrc-BFS,D-STORM-CUDA,D-STORM-cuBLAS,
-    D-STORM-SpMM-Cython,SciPy,D-STORM-GraphBLAS,D-STORM-NumpyBLAS,M-AORM,GB-bfs,I-AORM,NetworkX},
-  xmin=0, xmax=22,
-  enlarge y limits={abs=7pt},
-  nodes near coords={\pgfmathprintnumber[precision=2]{\pgfplotspointmeta}},
-  nodes near coords style={font=\scriptsize, anchor=west},
-  y tick label style={font=\small},
-]
-\addplot[fill=yellow!50, draw=yellow!70!black, forget plot]
-  coordinates {(0.051,BG1) (0.062,TG2)};
-\addplot[fill=purple!40, draw=purple!60!black, bar shift=0pt, forget plot]
-  coordinates {(0.369,TG1)};
-\addplot[fill=blue!40, draw=blue!60!black, bar shift=0pt, forget plot]
-  coordinates {(2.323,TC1) (4.394,TC3) (6.670,TC2)};
-\addplot[fill=orange!18, draw=orange!50!black, bar shift=0pt, forget plot]
-  coordinates {(3.316,BC2) (10.107,BC4) (12.288,BC5) (13.660,BC3) (20.231,BC1)};
-\end{axis}
-\end{tikzpicture}
-\caption{6개 그래프 총합 실행 시간. BG1/TG2 (Tier~1)이 기존 GPU 기법 (Tier~2)과 뚜렷한 계층 분리.}
-\label{fig:grand-bar}
-\end{figure}
-
 %======================================================================
-\section{D-STORM의 병목과 구조적 한계}
+\section{스케일링 분석}
 %======================================================================
 
-\subsection{D-STORM 최적화 극한: per-source BFS로의 수렴}
-
-D-STORM의 SpMM 병목을 순차적으로 제거하면 per-source BFS에 수렴함을 실험적으로 확인하였다.
+\subsection{GPU 4기법 스케일링 (BA graphs)}
 
 \begin{table}[H]\centering
-\caption{D-STORM 최적화 경로 (Facebook 기준)}
+\caption{BA 그래프 스케일링: GPU 4기법 (초)}
+\label{tab:scaling}
+\small
+\begin{tabular}{@{}rrrrr@{}}
+\toprule
+$n$ & \textbf{BG1} & \textbf{BG2} & \textbf{TG1} & \textbf{TG2} \\
+\midrule
+1,000 & \textbf{0.001} & 0.001 & 0.006 & 0.002 \\
+2,000 & \textbf{0.003} & 0.003 & 0.016 & 0.005 \\
+4,000 & 0.011 & \textbf{0.010} & 0.052 & 0.019 \\
+6,000 & \textbf{0.023} & 0.025 & 0.100 & 0.062 \\
+8,000 & \textbf{0.043} & 0.045 & 0.163 & 0.123 \\
+10,000 & \textbf{0.067} & 0.072 & 0.238 & 0.211 \\
+15,000 & \textbf{0.156} & 0.167 & 0.487 & 0.454 \\
+\rowcolor{gridwarn!8} 20,000 & \textbf{0.263} & 0.281 & 0.805 & 12.784 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{분석.}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{TG2 메모리 절벽}: $n = 20{,}000$에서 TG2가 12.8초로 폭증. dense 버퍼 $16n^2 = 6.4$GB가 GPU 메모리를 압박.
+  \item \textbf{TG1 안정 확장}: 비트 압축으로 메모리를 $4.25n^2$로 75\% 절감. $n = 20{,}000$에서 0.805초로 안정 동작.
+  \item \textbf{BG1/BG2}: $4n^2$ 메모리, 단일 커널 launch로 전 구간 최고.
+  \item \textbf{TG1 vs BG1}: 2.7배 격차는 D-STORM 프레임워크의 구조적 비용 (per-hop sync, atomicOr, 배치 관리).
+\end{itemize}
+
+\subsection{메모리 사용량 비교}
+
+\begin{table}[H]\centering
+\caption{GPU 기법별 메모리 사용량}
+\label{tab:memory}
+\small
+\begin{tabular}{@{}llrr@{}}
+\toprule
+\textbf{기법} & \textbf{주요 버퍼} & \textbf{메모리} & $n\!=\!20{,}000$ \\
+\midrule
+BG1/BG2 & D[$n^2$] & $4n^2$ & 1.6 GB \\
+TG1 & D[$n^2$] + batch 버퍼 & $\sim 4.25n^2$ & 1.7 GB \\
+\rowcolor{gridwarn!8} TG2 & D + F + out\_row + out\_col & $16n^2$ & \textbf{6.4 GB} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%======================================================================
+\section{성능 분석}
+%======================================================================
+
+\subsection{성능 계층 구조}
+
+\begin{tcolorbox}[colback=gray!5, colframe=gray!50!black, title=성능 계층 (전체 그래프 기준)]
+\textbf{Tier~1} BG1/BG2/TG2 (0.003--0.03s) GPU BFS / DAWN / direct expand \\
+\textbf{Tier~2} TG1 (0.009--0.25s) GPU 비트 압축 frontier 공유 D-STORM \\
+\textbf{Tier~3} TC1/BC2 (0.16--1.92s) CPU SpMM+Cython / C BFS \\
+\textbf{Tier~4} TC2/TC3/BC4 (0.30--5.43s) CPU dense / GraphBLAS \\
+\textbf{Tier~5} BC1/BC3/BC5 (0.39--14.1s) Python BFS / edge-wise
+\end{tcolorbox}
+
+\subsection{D-STORM 최적화 경로: per-source BFS로의 수렴}
+
+\begin{table}[H]\centering
+\caption{D-STORM GPU 최적화 경로 (Facebook 기준)}
 \label{tab:convergence}
 \small
 \begin{tabular}{@{}llrr@{}}
 \toprule
-\textbf{단계} & \textbf{변경 사항} & \textbf{시간 (s)} & \textbf{개선} \\
+\textbf{단계} & \textbf{변경} & \textbf{시간 (s)} & \textbf{개선} \\
 \midrule
 GPU-Sparse & cuSPARSE SpMM + sparse prune & 0.192 & 1.0$\times$ \\
-DirectExpand (atomicExch) & SpMM $\to$ CSR 직접 확장 & 0.041 & 4.7$\times$ \\
-DirectExpand (guard+CAS) & atomicExch $\to$ guard+CAS & 0.030 & 6.4$\times$ \\
-BG1 GPU-PerSrc-BFS & dist 배열 1개로 통합, 단일 launch & \textbf{0.019} & \textbf{10.1$\times$} \\
+TG2 DirectExpand & SpMM $\to$ CSR 직접 확장 (guard+CAS) & 0.028 & 6.9$\times$ \\
+TG1 DAWNiBFS & 비트 압축 frontier 공유 & 0.247 & 0.8$\times$ \\
+BG1 PerSrc-BFS & 모든 행렬 프레임워크 제거 & \textbf{0.016} & \textbf{12.0$\times$} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{구조적 수렴.}
-D-STORM의 행렬 대수적 접근은 다음 구조를 강제한다:
-\begin{enumerate}[leftmargin=1.4em]
-  \item \textbf{Frontier 행렬} ($n \times n$): 전체 소스의 frontier를 하나의 행렬로 통합.
-  \item \textbf{Footprint 행렬}: 전체 소스가 공유 $\to$ 쓰기 시 동기화(atomic) 필요.
-  \item \textbf{반복 커널 launch}: hop당 1회 $\to$ 지름에 비례하는 오버헤드.
-\end{enumerate}
+각 단계는 행렬 대수적 간접성을 제거한다: SpMM $\to$ CSR 직접 순회 $\to$ frontier 공유 $\to$ 독립 BFS. TG1과 BG1의 2.7배 격차는 공유 footprint(atomicOr), per-hop 동기화, 배치 관리라는 \textbf{구조적 한계}이며, 엔지니어링 격차가 아니다.
 
-반면 per-source BFS(BG1)는:
+%======================================================================
+\section{연구 기여}
+%======================================================================
+
+\begin{tcolorbox}[colback=green!5, colframe=green!50!black, title=연구 기여, breakable]
+
+본 연구는 ``D-STORM이 가장 빠르다''는 주장이 아니라, \textbf{행렬 대수 APSP의 한계와 가능성을 체계적으로 규명}한 것이 핵심이다.
+
 \begin{enumerate}[leftmargin=1.4em]
-  \item 소스 간 \textbf{완전 독립} $\to$ atomic 불필요.
-  \item \texttt{dist} 배열이 frontier/visited/distance를 겸용 $\to$ 메모리 1/3.
-  \item \textbf{단일 커널} launch $\to$ 반복 오버헤드 0.
+  \item \textbf{행렬 대수 APSP가 CPU에서 C BFS를 능가}: TC1(D-STORM-SpMM-Cython)이 SciPy C BFS를 6개 위상 전부에서 능가 (최대 2.0$\times$). Python 오케스트레이션의 행렬 대수 접근이 최적화된 C 루프를 이기는 비자명한 결과.
+
+  \item \textbf{GPU 행렬 대수 APSP는 per-source BFS로 수렴}: D-STORM의 SpMM 병목을 순차 제거하면 per-source BFS에 수렴. 행렬 대수 프레임워크의 간접 비용(공유 footprint, per-hop sync, 배치 관리)이 순수 BFS 대비 불가피한 오버헤드.
+
+  \item \textbf{12종 체계적 벤치마크}: Python BFS, C BFS, AORM (edge-wise/matmul), D-STORM (CPU 3종 + GPU 2종), GraphBLAS (BFS/D-STORM), GPU per-source BFS, DAWN을 동일 환경에서 비교. 기존 문헌에서 찾기 어려운 공정한 교차 패러다임 비교.
+
+  \item \textbf{D-STORM 고유 기능}: 동적 간선 삽입 ($D'_{ij} = \min(D_{ij}, D_{ia}+1+D_{bj})$, $O(n^2)$ 갱신, 22--33$\times$ 가속)은 BFS로 대체 불가. 대수적 수렴 분석 프레임워크.
+
+  \item \textbf{GPU D-STORM 확장성}: TG1(DAWNiBFS)이 iBFS 비트 압축으로 TG2의 메모리 병목($16n^2$)을 해결하여 $n = 20{,}000$+ 동작 가능. BFS 대비 2.7$\times$ 느리나, D-STORM 프레임워크를 유지하면서 대규모 동작하는 최선의 구현.
 \end{enumerate}
+\end{tcolorbox}
 
 %======================================================================
 \section{종합 결론}
 %======================================================================
 
-\begin{tcolorbox}[colback=green!5, colframe=green!50!black, title=핵심 결론]
-\begin{enumerate}[leftmargin=1.4em]
-  \item \textbf{GPU-PerSrc-BFS(BG1)가 전체 최고}: SciPy 대비 23--101배. per-source BFS의 CUDA 병렬화가 full APSP에서 가장 효율적.
-  \item \textbf{D-STORM-CUDA(TG2)가 D-STORM GPU 최고}: guard+CAS로 정확성을 보장하면서 non-atomic 동등 성능 유지. 소세계($n \approx 2{,}000$)에서 BG1을 18--34\% 상회.
-  \item \textbf{guard+CAS 패턴의 검증}: non-atomic read guard가 이미 방문한 셀에서 atomic을 건너뛰어, \texttt{atomicExch} 대비 38\% 빠르면서 정확성 보장. CUDA 커널의 monotonic flag 패턴에 범용 적용 가능.
-  \item \textbf{D-STORM 최적화의 극한은 per-source BFS}: SpMM $\to$ 직접 확장 $\to$ guard+CAS로 최적화하면 BG1과 유사한 구조에 수렴. 남은 1.6배 차이는 단일 launch와 메모리 구조의 차이.
-  \item \textbf{조건부 운영 영역}:
-    \begin{itemize}
-      \item GPU 가용 시: BG1 사용 (대규모/고지름 최고), 소세계에서는 TG2도 경쟁력 있음.
-      \item CPU 전용: TC1 D-STORM-SpMM-Cython (모든 위상에서 CPU 최고, SciPy 대비 1.0--1.9배).
-      \item $k$-hop 구조적 인터페이스 필요: D-STORM (TC1 또는 TG2).
-    \end{itemize}
-\end{enumerate}
+\begin{tcolorbox}[colback=blue!3, colframe=blue!50!black, title=조건부 운영 가이드]
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{GPU, full APSP}: BG1 GPU-PerSrc-BFS (모든 조건 최고).
+  \item \textbf{GPU, D-STORM 필요 (동적 갱신 등)}: $n < 15{,}000$ $\to$ TG2, $n \geq 15{,}000$ $\to$ TG1.
+  \item \textbf{CPU 전용}: TC1 D-STORM-SpMM-Cython (모든 위상 CPU 최고, SciPy 대비 최대 2.0$\times$).
+  \item \textbf{동적 간선 삽입}: D-STORM (TC1/TG1/TG2) --- BFS 대체 불가.
+\end{itemize}
 \end{tcolorbox}
 
 \end{document}

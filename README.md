@@ -1,168 +1,132 @@
-# STORM: Sparse Topology-Aware Optimal Reachability Matrix
+# D-STORM: Dynamic Sparse Topology-Aware Optimal Reachability Matrix
 
-**Small World, Small Efforts** — Fast incremental all-pairs shortest paths for small-world networks.
+**Small World, Small Efforts** — Fast all-pairs shortest paths for graphs, from Python BFS to custom CUDA kernels.
 
-STORM extends the [AORM framework](https://ieeexplore.ieee.org/document/9424548) (IEEE Access, 2021) with sparse matrix redesign, a Cython C-extension for fused pruning, CUDA GPU acceleration, and GraphBLAS baseline comparison.
+D-STORM extends the [AORM framework](https://ieeexplore.ieee.org/document/9424548) (IEEE Access, 2021) with sparse matrix redesign, Cython fused pruning, CUDA GPU acceleration, and GraphBLAS baseline comparison. This repository contains 11 APSP implementations benchmarked across 6 graph topologies.
 
 **Project Website:** [https://dknife.github.io/STORM](https://dknife.github.io/STORM)
 
 ## Key Results (Facebook, n=4,039)
 
-| Method | Time (s) | vs SciPy (C) | vs NetworkX |
-|--------|----------|-------------|-------------|
-| **GPU-Dense** (cuBLAS) | **0.114** | **17.9x** | **128.8x** |
-| **GPU-Sparse** (cuSPARSE) | 0.175 | 11.7x | 83.9x |
-| **D-STORM-Sparse** (Cython) | 1.093 | **1.87x** | 13.4x |
-| D-STORM-Dense | 1.816 | 1.13x | 8.1x |
-| GraphBLAS-frontier | 1.997 | 1.02x | 7.3x |
-| SciPy (C Dijkstra) | 2.045 | 1.0x | 7.2x |
-| I-AORM (original) | 8.070 | 0.25x | 1.8x |
-| NetworkX | 14.683 | 0.14x | 1.0x |
+| # | Method | ID | Time (s) | vs SciPy | vs NetworkX |
+|---|--------|----|----------|----------|-------------|
+| 1 | **GPU-PerSrc-BFS** | BG1 | **0.019** | **101x** | **748x** |
+| 2 | **D-STORM-CUDA** (guard+CAS) | TG2 | 0.030 | 64x | 474x |
+| 3 | D-STORM-cuBLAS | TG1 | 0.155 | 12x | 92x |
+| 4 | **D-STORM-SpMM-Cython** | TC1 | 1.016 | **1.9x** | 14x |
+| 5 | D-STORM-NumpyBLAS | TC2 | 1.723 | 1.1x | 8x |
+| 6 | D-STORM-GraphBLAS | TC3 | 1.897 | 1.0x | 7x |
+| 7 | SciPy (C BFS) | BC2 | 1.921 | 1.0x | 7x |
+| 8 | M-AORM | BC4 | 2.868 | 0.7x | 5x |
+| 9 | GB-bfs | BC5 | 4.065 | 0.5x | 4x |
+| 10 | I-AORM | BC3 | 7.489 | 0.3x | 2x |
+| 11 | NetworkX | BC1 | 14.213 | 0.1x | 1x |
 
-- **Hop-constrained (k=5):** 18.3x over NetworkX at 89% accuracy
-- **Dynamic edge addition:** 22-33x over full recomputation
-- **GPU speedup scales with size:** 14x (n=500) to 16.4x (n=5,000)
+All 11 methods produce identical distance matrices (verified element-wise).
 
-## Implementations
+## Performance Tiers
 
-| Directory | Description | Kernel |
-|-----------|-------------|--------|
-| `02_STORM_Implement/` | CPU D-STORM with Cython fused pruning | scipy SpMM + Cython C |
-| `02_STORM_GPU_Implement/` | GPU D-STORM via CUDA | cuBLAS / cuSPARSE (CuPy) |
-| `03_Baseline_GraphBLAS/` | GraphBLAS APSP baseline | SuiteSparse:GraphBLAS (CFFI) |
-| `03_experiment_result/` | Benchmark scripts, JSON data, LaTeX reports | -- |
-| `05_Integrated/` | Extended paper with all results | -- |
-
-## Build & Run
-
-### CPU D-STORM (Cython)
-
-```bash
-cd 02_STORM_Implement
-pip install -r requirements.txt
+```
+Tier 1  BG1/TG2  (0.004–0.03s)  GPU per-source BFS / CUDA direct expand
+Tier 2  TG1      (0.03–0.16s)   GPU cuBLAS dense matmul
+Tier 3  TC1/BC2  (0.13–1.92s)   CPU SpMM+Cython / C BFS
+Tier 4  TC2/TC3  (0.30–5.28s)   CPU dense BLAS / GraphBLAS
+Tier 5  BC1–BC5  (0.40–14.2s)   Python BFS / edge-wise / GraphBLAS BFS
 ```
 
-**Build Cython extension:**
+## Implementations (02_Implementations/)
 
-On macOS/Linux:
-```bash
-python setup.py build_ext --inplace
-```
+| ID | Method | Kernel | Platform |
+|----|--------|--------|----------|
+| BC1 | NetworkX | Python BFS | CPU |
+| BC2 | SciPy | C BFS | CPU |
+| BC3 | I-AORM | edge-wise row sum | CPU |
+| BC4 | M-AORM | dense BLAS matmul | CPU |
+| BC5 | GB-bfs | GrB_vxm masked BFS | CPU |
+| TC1 | D-STORM-SpMM-Cython | SciPy SpMM + Cython fused prune | CPU |
+| TC2 | D-STORM-NumpyBLAS | NumPy BLAS matmul | CPU |
+| TC3 | D-STORM-GraphBLAS | GrB_mxm + complement mask | CPU |
+| BG1 | GPU-PerSrc-BFS | CUDA block-per-source BFS | GPU |
+| TG1 | D-STORM-cuBLAS | cuBLAS dense matmul | GPU |
+| TG2 | D-STORM-CUDA | CUDA CSR direct expand (guard+CAS) | GPU |
 
-On Windows (requires [VS Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)):
-```bat
-:: Option 1: setuptools (if no Unicode path issues)
-python setup.py build_ext --inplace
+## Quick Start
 
-:: Option 2: Manual build (if setuptools fails due to Korean/Unicode paths)
-call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" amd64
-python -m cython storm/_storm_core.pyx
-cl /c /O2 /MD /I"%PYTHON_INCLUDE%" /I"%NUMPY_INCLUDE%" /Tc storm\_storm_core.c /Fo:storm\_storm_core.obj
-link /DLL /LIBPATH:"%PYTHON_LIBS%" python3XX.lib storm\_storm_core.obj /OUT:storm\_storm_core.cpXXX-win_amd64.pyd
-```
-
-Find your paths with:
-```bash
-python -c "import sysconfig, numpy; print('INCLUDE:', sysconfig.get_path('include')); print('LIBS:', sysconfig.get_config_var('installed_base')+'/libs'); print('NUMPY:', numpy.get_include())"
-```
-
-**Without Cython:** D-STORM automatically falls back to a NumPy vectorized path. Performance is ~27% slower than Cython but still competitive with SciPy.
-
-**Run:**
-```bash
-# Full APSP
-python main.py -m storm -i graph.txt -r
-
-# Hop-constrained (k=5)
-python main.py -m storm -i graph.txt -r -k 5
-
-# Compare all CPU methods
-python main.py -m compare -i graph.txt -r
-```
-
-### GPU D-STORM (CUDA)
-
-Requires NVIDIA GPU with CUDA 12.x.
+### Run Full Benchmark (11 methods × 6 graphs)
 
 ```bash
-cd 02_STORM_GPU_Implement
-pip install -r requirements.txt
-```
-
-If CuPy cannot find CUDA, install the runtime packages:
-```bash
-pip install nvidia-cuda-runtime-cu12 nvidia-cuda-nvrtc-cu12 nvidia-cublas-cu12 nvidia-cusparse-cu12 nvidia-nvjitlink-cu12
-```
-
-The `storm_gpu/cuda_env.py` module automatically detects `CUDA_PATH` from pip-installed nvidia packages.
-
-**Run:**
-```bash
-# GPU sparse (cuSPARSE, recommended for n >= 2000)
-python main.py -m sparse -i graph.txt -r
-
-# GPU dense (cuBLAS, fastest for n < 2000)
-python main.py -m dense -i graph.txt -r
-
-# Compare GPU vs CPU vs SciPy vs NetworkX
-python main.py -m compare -i graph.txt -r
-```
-
-### GraphBLAS Baseline
-
-```bash
-cd 03_Baseline_GraphBLAS
-pip install suitesparse-graphblas
-pip install -r requirements.txt
-
-# Compare GraphBLAS vs D-STORM vs SciPy vs NetworkX
-python main.py -m compare -i graph.txt -r
-```
-
-### Full Benchmark (10 methods x 10 datasets)
-
-```bash
-cd 03_experiment_result
+cd 02_Implementations
+pip install numpy scipy networkx cupy-cuda12x tqdm
 python run_full_benchmark.py
+```
+
+TC3 (GraphBLAS) must run in a separate process due to `GrB_init` conflict with BC5:
+```bash
+pip install suitesparse-graphblas
+python run_tc3_standalone.py
 ```
 
 Results are saved to `full_benchmark_results.json`.
 
+### Run Individual Methods
+
+Each method in `02_Implementations/<ID>/apsp.py` exposes a `run_apsp(A_csr, k=-1, verbose=True)` function:
+
+```python
+import scipy.sparse as sp
+from BC2_SciPy.apsp import run_apsp
+
+A = sp.load_npz("graph.npz")  # or any scipy sparse matrix
+D = run_apsp(A)                # returns int32 distance matrix
+```
+
 ## Project Structure
 
 ```
-02_STORM_Implement/
-├── main.py                  # CPU CLI entry point
-├── setup.py                 # Cython build config
-├── build_cython.bat         # Windows manual build script
-└── storm/
-    ├── core.py              # SparseStormIterator (Cython + NumPy fallback)
-    ├── _storm_core.pyx      # Cython fused pruning kernel
-    ├── apsp.py              # APSP functions
-    ├── dynamic.py           # D-STORM edge insertion
-    ├── pe.py                # Reachability profile encoding
-    ├── girth.py             # Graph girth
-    └── loader.py            # Multi-format graph loader
+02_Implementations/           # 11 APSP implementations
+├── BC1_NetworkX/apsp.py
+├── BC2_SciPy/apsp.py
+├── BC3_IAORM/apsp.py
+├── BC4_MAORM/apsp.py
+├── BC5_GB_bfs/apsp.py
+├── BG1_GPU_PerSrc_BFS/apsp.py
+├── TC1_DSTORM_SpMM_Cython/apsp.py
+├── TC2_DSTORM_NumpyBLAS/apsp.py
+├── TC3_DSTORM_GraphBLAS/apsp.py
+├── TG1_DSTORM_cuBLAS/apsp.py
+├── TG2_DSTORM_CUDA/apsp.py
+├── common/                   # Shared utilities
+│   ├── cuda_env.py           # CUDA path auto-detection
+│   └── loader.py             # Multi-format graph loader
+├── run_full_benchmark.py     # Full benchmark script
+└── run_tc3_standalone.py     # TC3 standalone (GraphBLAS init conflict)
 
-02_STORM_GPU_Implement/
-├── main.py                  # GPU CLI entry point
-└── storm_gpu/
-    ├── cuda_env.py          # CUDA path auto-detection
-    ├── core.py              # GpuSparseStormIterator, GpuDenseStormIterator
-    ├── apsp.py              # GPU APSP functions
-    └── loader.py            # Graph loader
+03_Experiments/               # Benchmark reports
+└── Comparison.tex            # 11×6 comparison report (Korean)
 
-03_Baseline_GraphBLAS/
-├── main.py                  # GraphBLAS CLI entry point
-├── graphblas_apsp.py        # BFS + frontier APSP via GrB_mxm / GrB_vxm
-└── loader.py                # Graph loader
+04_Datasets/                  # Graph datasets
+├── real-world/               # Facebook social network (n=4,039)
+├── simple/                   # Small test graphs
+└── synthetic/                # Generated graphs
 
-03_experiment_result/
-├── run_full_benchmark.py    # Full 10x10 benchmark script
-├── full_benchmark_results.json
-├── storm_results.json
-└── 종합보고.tex              # Comprehensive report (Korean)
+docs/                         # GitHub Pages website
 ```
+
+## TG2 guard+CAS Kernel
+
+D-STORM-CUDA (TG2) uses a custom CUDA kernel that directly expands frontier entries via CSR traversal, replacing cuSPARSE SpMM entirely. The footprint check uses a **guard+CAS** pattern:
+
+```c
+if (F[idx] == 0) {                      // non-atomic guard: skip visited cells
+    if (atomicCAS(&F[idx], 0, 1) == 0) { // atomic CAS: race-free 0→1
+        int pos = atomicAdd(out_count, 1);
+        out_row[pos] = i;
+        out_col[pos] = k;
+    }
+}
+```
+
+This achieves correctness (no duplicate frontier entries) with performance equal to non-atomic writes, and 38% faster than pure `atomicExch` on high-degree graphs.
 
 ## Benchmark Environment
 

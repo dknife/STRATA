@@ -17,7 +17,7 @@ All 12 methods produce identical distance matrices (verified element-wise).
 | 1 | **GPU-PerSrc-BFS** | BG1 | **0.016** | **122x** | Baseline |
 | 2 | **DAWN-SOVM** | BG2 | 0.019 | 100x | Baseline |
 | 3 | **D-STORM-CUDA** (guard+CAS) | TG2 | 0.028 | 68x | D-STORM |
-| 4 | **D-STORM-DAWN** (bitwise) | TG1 | 0.247 | 7.8x | D-STORM |
+| 4 | **D-STORM-DAWNiBFS** (bitwise) | TG1 | 0.247 | 7.8x | D-STORM |
 
 ### CPU Methods
 
@@ -68,7 +68,7 @@ TG2 hits a memory cliff at n>15K (6.4GB dense buffers). TG1's bitwise approach (
 | TC3 | D-STORM-GraphBLAS | GrB_mxm + complement mask | CPU |
 | BG1 | GPU-PerSrc-BFS | CUDA block-per-source BFS | GPU |
 | BG2 | DAWN-SOVM | CUDA frontier-driven BFS (DAWN) | GPU |
-| TG1 | D-STORM-DAWN | Bitwise frontier-sharing (iBFS + DAWN) | GPU |
+| TG1 | D-STORM-DAWNiBFS | Bitwise frontier-sharing (iBFS + DAWN) | GPU |
 | TG2 | D-STORM-CUDA | CUDA CSR direct expand (guard+CAS) | GPU |
 
 ## Research Contributions
@@ -110,7 +110,7 @@ Per-source BFS is faster for full APSP, but D-STORM provides capabilities that B
 
 ### 5. GPU D-STORM scalability via bitwise frontier sharing
 
-TG1 (D-STORM-DAWN) demonstrates that combining iBFS's bitwise packing with DAWN's frontier-driven expansion reduces D-STORM's memory from 16n² to ~4.25n² bytes, enabling operation at n=20K+ where TG2 fails. While slower than pure BFS (2.7x), this is the fastest known D-STORM GPU implementation that maintains the algebraic framework at scale.
+TG1 (D-STORM-DAWNiBFS) demonstrates that combining iBFS's bitwise packing with DAWN's frontier-driven expansion reduces D-STORM's memory from 16n² to ~4.25n² bytes, enabling operation at n=20K+ where TG2 fails. While slower than pure BFS (2.7x), this is the fastest known D-STORM GPU implementation that maintains the algebraic framework at scale.
 
 | | TG2 (guard+CAS) | TG1 (bitwise) | BG1 (pure BFS) |
 |---|---|---|---|
@@ -161,7 +161,7 @@ D = run_apsp(A)                # returns int32 distance matrix
 ├── TC3_DSTORM_GraphBLAS/
 ├── BG1_GPU_PerSrc_BFS/       # GPU baselines
 ├── BG2_DAWN/
-├── TG1_DSTORM_DAWN/          # D-STORM GPU variants
+├── TG1_DSTORM_DAWNiBFS/          # D-STORM GPU variants
 ├── TG2_DSTORM_CUDA/
 ├── common/                   # Shared utilities
 ├── run_full_benchmark.py     # Full benchmark script

@@ -1,4 +1,4 @@
-"""TG1: D-STORM-DAWN -- Bitwise frontier-sharing D-STORM with DAWN expansion.
+"""TG1: D-STORM-DAWNiBFS -- Bitwise frontier-sharing D-STORM with DAWN + iBFS.
 
 Combines D-STORM's all-source simultaneous processing with DAWN's
 frontier-driven expansion and iBFS's bitwise packing (SIGMOD 2016).
@@ -148,7 +148,7 @@ def run_apsp(A_csr, k=-1, batch_size=512, verbose=True):
     W = batch_size // 32
     num_batches = (n + batch_size - 1) // batch_size
     if verbose:
-        print(f"  TG1 D-STORM-DAWN: n={n}, batch={batch_size}, W={W}, batches={num_batches}")
+        print(f"  TG1 D-STORM-DAWNiBFS: n={n}, batch={batch_size}, W={W}, batches={num_batches}")
 
     indptr_gpu = cp.asarray(A_csr.indptr.astype(np.int32))
     indices_gpu = cp.asarray(A_csr.indices.astype(np.int32))

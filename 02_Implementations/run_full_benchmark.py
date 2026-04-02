@@ -46,7 +46,7 @@ METHODS = [
     ('TC3', 'D-STORM-GraphBLAS', 'TC3_DSTORM_GraphBLAS.apsp', False, True),
     ('BG1', 'GPU-PerSrc-BFS',   'BG1_GPU_PerSrc_BFS.apsp',  True,  False),
     ('BG2', 'DAWN-SOVM',        'BG2_DAWN.apsp',             True,  False),
-    ('TG1', 'D-STORM-DAWN',    'TG1_DSTORM_DAWN.apsp',     True,  False),
+    ('TG1', 'D-STORM-DAWNiBFS', 'TG1_DSTORM_DAWNiBFS.apsp', True,  False),
     ('TG2', 'D-STORM-CUDA',    'TG2_DSTORM_CUDA.apsp',     True,  False),
 ]
 

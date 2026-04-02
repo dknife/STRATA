@@ -1,0 +1,362 @@
+{
+  "Facebook": {
+    "info": {
+      "n": 4039,
+      "m": 176468,
+      "type": "social",
+      "diam": 8
+    },
+    "results": {
+      "BC1": {
+        "label": "NetworkX",
+        "time": 14.213422700064257,
+        "check": "ref"
+      },
+      "BC2": {
+        "label": "SciPy",
+        "time": 1.920529600000009,
+        "check": "PASS"
+      },
+      "BC3": {
+        "label": "I-AORM",
+        "time": 7.489275100175291,
+        "check": "PASS"
+      },
+      "BC4": {
+        "label": "M-AORM",
+        "time": 2.867682400159538,
+        "check": "PASS"
+      },
+      "BC5": {
+        "label": "GB-bfs",
+        "time": 4.0651331001427025,
+        "check": "PASS"
+      },
+      "TC1": {
+        "label": "D-STORM-SpMM-Cython",
+        "time": 1.0164118001703173,
+        "check": "PASS"
+      },
+      "TC2": {
+        "label": "D-STORM-NumpyBLAS",
+        "time": 1.7227002999279648,
+        "check": "PASS"
+      },
+      "BG1": {
+        "label": "GPU-PerSrc-BFS",
+        "time": 0.019120899960398674,
+        "check": "PASS"
+      },
+      "TG1": {
+        "label": "D-STORM-cuBLAS",
+        "time": 0.15540029993280768,
+        "check": "PASS"
+      },
+      "TG2": {
+        "label": "D-STORM-CUDA",
+        "time": 0.029776199953630567,
+        "check": "PASS"
+      }
+    }
+  },
+  "BA-2000": {
+    "info": {
+      "n": 2000,
+      "m": 19950,
+      "type": "BA",
+      "diam": 5
+    },
+    "results": {
+      "BC1": {
+        "label": "NetworkX",
+        "time": 1.1878788000904024,
+        "check": "ref"
+      },
+      "BC2": {
+        "label": "SciPy",
+        "time": 0.3115387998986989,
+        "check": "PASS"
+      },
+      "BC3": {
+        "label": "I-AORM",
+        "time": 0.4070230999495834,
+        "check": "PASS"
+      },
+      "BC4": {
+        "label": "M-AORM",
+        "time": 0.42946320003829896,
+        "check": "PASS"
+      },
+      "BC5": {
+        "label": "GB-bfs",
+        "time": 1.1910463999956846,
+        "check": "PASS"
+      },
+      "TC1": {
+        "label": "D-STORM-SpMM-Cython",
+        "time": 0.2842664001509547,
+        "check": "PASS"
+      },
+      "TC2": {
+        "label": "D-STORM-NumpyBLAS",
+        "time": 0.30587670020759106,
+        "check": "PASS"
+      },
+      "BG1": {
+        "label": "GPU-PerSrc-BFS",
+        "time": 0.005886800121515989,
+        "check": "PASS"
+      },
+      "TG1": {
+        "label": "D-STORM-cuBLAS",
+        "time": 0.0285671001765877,
+        "check": "PASS"
+      },
+      "TG2": {
+        "label": "D-STORM-CUDA",
+        "time": 0.004989400040358305,
+        "check": "PASS"
+      }
+    }
+  },
+  "WS-2000": {
+    "info": {
+      "n": 2000,
+      "m": 12000,
+      "type": "WS",
+      "diam": 8
+    },
+    "results": {
+      "BC1": {
+        "label": "NetworkX",
+        "time": 1.21782479993999,
+        "check": "ref"
+      },
+      "BC2": {
+        "label": "SciPy",
+        "time": 0.2905124998651445,
+        "check": "PASS"
+      },
+      "BC3": {
+        "label": "I-AORM",
+        "time": 0.5204096001107246,
+        "check": "PASS"
+      },
+      "BC4": {
+        "label": "M-AORM",
+        "time": 0.620913399849087,
+        "check": "PASS"
+      },
+      "BC5": {
+        "label": "GB-bfs",
+        "time": 1.238092000130564,
+        "check": "PASS"
+      },
+      "TC1": {
+        "label": "D-STORM-SpMM-Cython",
+        "time": 0.29083249997347593,
+        "check": "PASS"
+      },
+      "TC2": {
+        "label": "D-STORM-NumpyBLAS",
+        "time": 0.44579700008034706,
+        "check": "PASS"
+      },
+      "BG1": {
+        "label": "GPU-PerSrc-BFS",
+        "time": 0.005877200048416853,
+        "check": "PASS"
+      },
+      "TG1": {
+        "label": "D-STORM-cuBLAS",
+        "time": 0.02968649985268712,
+        "check": "PASS"
+      },
+      "TG2": {
+        "label": "D-STORM-CUDA",
+        "time": 0.004375899909064174,
+        "check": "PASS"
+      }
+    }
+  },
+  "ER-2000": {
+    "info": {
+      "n": 2000,
+      "m": 19882,
+      "type": "ER",
+      "diam": 6
+    },
+    "results": {
+      "BC1": {
+        "label": "NetworkX",
+        "time": 1.3657700000330806,
+        "check": "ref"
+      },
+      "BC2": {
+        "label": "SciPy",
+        "time": 0.3135283999145031,
+        "check": "PASS"
+      },
+      "BC3": {
+        "label": "I-AORM",
+        "time": 0.4493896998465061,
+        "check": "PASS"
+      },
+      "BC4": {
+        "label": "M-AORM",
+        "time": 0.5009207001421601,
+        "check": "PASS"
+      },
+      "BC5": {
+        "label": "GB-bfs",
+        "time": 1.2482992999721318,
+        "check": "PASS"
+      },
+      "TC1": {
+        "label": "D-STORM-SpMM-Cython",
+        "time": 0.3161243998911232,
+        "check": "PASS"
+      },
+      "TC2": {
+        "label": "D-STORM-NumpyBLAS",
+        "time": 0.35943079995922744,
+        "check": "PASS"
+      },
+      "BG1": {
+        "label": "GPU-PerSrc-BFS",
+        "time": 0.0064338999800384045,
+        "check": "PASS"
+      },
+      "TG1": {
+        "label": "D-STORM-cuBLAS",
+        "time": 0.03009549994021654,
+        "check": "PASS"
+      },
+      "TG2": {
+        "label": "D-STORM-CUDA",
+        "time": 0.004866000032052398,
+        "check": "PASS"
+      }
+    }
+  },
+  "Grid-45x45": {
+    "info": {
+      "n": 2025,
+      "m": 7920,
+      "type": "Grid",
+      "diam": 88
+    },
+    "results": {
+      "BC1": {
+        "label": "NetworkX",
+        "time": 1.0891857000533491,
+        "check": "ref"
+      },
+      "BC2": {
+        "label": "SciPy",
+        "time": 0.1669046999886632,
+        "check": "PASS"
+      },
+      "BC3": {
+        "label": "I-AORM",
+        "time": 4.397243000101298,
+        "check": "PASS"
+      },
+      "BC4": {
+        "label": "M-AORM",
+        "time": 5.276170500088483,
+        "check": "PASS"
+      },
+      "BC5": {
+        "label": "GB-bfs",
+        "time": 3.4121780002024025,
+        "check": "PASS"
+      },
+      "TC1": {
+        "label": "D-STORM-SpMM-Cython",
+        "time": 0.13456730009056628,
+        "check": "PASS"
+      },
+      "TC2": {
+        "label": "D-STORM-NumpyBLAS",
+        "time": 3.532323099905625,
+        "check": "PASS"
+      },
+      "BG1": {
+        "label": "GPU-PerSrc-BFS",
+        "time": 0.0072333000134676695,
+        "check": "PASS"
+      },
+      "TG1": {
+        "label": "D-STORM-cuBLAS",
+        "time": 0.09684290015138686,
+        "check": "PASS"
+      },
+      "TG2": {
+        "label": "D-STORM-CUDA",
+        "time": 0.013329799985513091,
+        "check": "PASS"
+      }
+    }
+  },
+  "PLC-2000": {
+    "info": {
+      "n": 2000,
+      "m": 19926,
+      "type": "PLC",
+      "diam": 5
+    },
+    "results": {
+      "BC1": {
+        "label": "NetworkX",
+        "time": 1.1566712001804262,
+        "check": "ref"
+      },
+      "BC2": {
+        "label": "SciPy",
+        "time": 0.3131852000951767,
+        "check": "PASS"
+      },
+      "BC3": {
+        "label": "I-AORM",
+        "time": 0.3970845998264849,
+        "check": "PASS"
+      },
+      "BC4": {
+        "label": "M-AORM",
+        "time": 0.41188489994965494,
+        "check": "PASS"
+      },
+      "BC5": {
+        "label": "GB-bfs",
+        "time": 1.1329046001192182,
+        "check": "PASS"
+      },
+      "TC1": {
+        "label": "D-STORM-SpMM-Cython",
+        "time": 0.2809064001776278,
+        "check": "PASS"
+      },
+      "TC2": {
+        "label": "D-STORM-NumpyBLAS",
+        "time": 0.30403629993088543,
+        "check": "PASS"
+      },
+      "BG1": {
+        "label": "GPU-PerSrc-BFS",
+        "time": 0.006020799977704883,
+        "check": "PASS"
+      },
+      "TG1": {
+        "label": "D-STORM-cuBLAS",
+        "time": 0.028763899812474847,
+        "check": "PASS"
+      },
+      "TG2": {
+        "label": "D-STORM-CUDA",
+        "time": 0.004681099904701114,
+        "check": "PASS"
+      }
+    }
+  }
+}

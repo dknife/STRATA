@@ -1,5 +1,5 @@
 """
-Full Benchmark: 12 methods x 6 graphs.
+Full Benchmark: 11 methods x 6 graphs.
 
 Graphs:
   1. Facebook      (n=4039, social, diam~8)
@@ -9,7 +9,7 @@ Graphs:
   5. Grid-45x45    (n=2025, lattice, diam=88)
   6. PLC-2000      (n=2000, powerlaw-cluster, diam~5)
 
-Methods: BC1..BC5, TC1..TC3, BG1, TG1..TG3
+Methods: BC1..BC5, TC1..TC3, BG1..BG2, TG2
 
 Protocol: GPU 1 warmup + 3 runs (min), CPU 3 runs (min).
 """
@@ -45,7 +45,8 @@ METHODS = [
     ('TC2', 'D-STORM-NumpyBLAS',  'TC2_DSTORM_NumpyBLAS.apsp',  False, False),
     ('TC3', 'D-STORM-GraphBLAS', 'TC3_DSTORM_GraphBLAS.apsp', False, True),
     ('BG1', 'GPU-PerSrc-BFS',   'BG1_GPU_PerSrc_BFS.apsp',  True,  False),
-    ('TG1', 'D-STORM-cuBLAS',   'TG1_DSTORM_cuBLAS.apsp',    True,  False),
+    ('BG2', 'DAWN-SOVM',        'BG2_DAWN.apsp',             True,  False),
+    ('TG1', 'D-STORM-DAWN',    'TG1_DSTORM_DAWN.apsp',     True,  False),
     ('TG2', 'D-STORM-CUDA',    'TG2_DSTORM_CUDA.apsp',     True,  False),
 ]
 
@@ -140,7 +141,7 @@ def main():
                 continue
 
             # Skip dense methods for large n
-            if mid in ('BC3', 'BC4', 'TC2', 'TG1') and n > MAX_DENSE_N:
+            if mid in ('BC3', 'BC4', 'TC2') and n > MAX_DENSE_N:
                 print(f"  {mid} {label:<22} SKIPPED (n>{MAX_DENSE_N})")
                 continue
 

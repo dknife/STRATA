@@ -9,52 +9,57 @@
     "results": {
       "BC1": {
         "label": "NetworkX",
-        "time": 14.213422700064257,
+        "time": 14.072488800156862,
         "check": "ref"
       },
       "BC2": {
         "label": "SciPy",
-        "time": 1.920529600000009,
+        "time": 1.9181618001312017,
         "check": "PASS"
       },
       "BC3": {
         "label": "I-AORM",
-        "time": 7.489275100175291,
+        "time": 8.692662600195035,
         "check": "PASS"
       },
       "BC4": {
         "label": "M-AORM",
-        "time": 2.867682400159538,
+        "time": 2.8305762000381947,
         "check": "PASS"
       },
       "BC5": {
         "label": "GB-bfs",
-        "time": 4.0651331001427025,
+        "time": 4.0707718001212925,
         "check": "PASS"
       },
       "TC1": {
         "label": "D-STORM-SpMM-Cython",
-        "time": 1.0164118001703173,
+        "time": 0.983540500048548,
         "check": "PASS"
       },
       "TC2": {
         "label": "D-STORM-NumpyBLAS",
-        "time": 1.7227002999279648,
+        "time": 1.6966254999861121,
         "check": "PASS"
       },
       "BG1": {
         "label": "GPU-PerSrc-BFS",
-        "time": 0.019120899960398674,
+        "time": 0.015723200049251318,
+        "check": "PASS"
+      },
+      "BG2": {
+        "label": "DAWN-SOVM",
+        "time": 0.019082099897786975,
         "check": "PASS"
       },
       "TG1": {
-        "label": "D-STORM-cuBLAS",
-        "time": 0.15540029993280768,
+        "label": "D-STORM-DAWN",
+        "time": 0.2469895000103861,
         "check": "PASS"
       },
       "TG2": {
         "label": "D-STORM-CUDA",
-        "time": 0.029776199953630567,
+        "time": 0.028404500102624297,
         "check": "PASS"
       }
     }
@@ -69,52 +74,57 @@
     "results": {
       "BC1": {
         "label": "NetworkX",
-        "time": 1.1878788000904024,
+        "time": 1.1470997999422252,
         "check": "ref"
       },
       "BC2": {
         "label": "SciPy",
-        "time": 0.3115387998986989,
+        "time": 0.30856609996408224,
         "check": "PASS"
       },
       "BC3": {
         "label": "I-AORM",
-        "time": 0.4070230999495834,
+        "time": 0.392637399956584,
         "check": "PASS"
       },
       "BC4": {
         "label": "M-AORM",
-        "time": 0.42946320003829896,
+        "time": 0.40069029992446303,
         "check": "PASS"
       },
       "BC5": {
         "label": "GB-bfs",
-        "time": 1.1910463999956846,
+        "time": 1.1442285999655724,
         "check": "PASS"
       },
       "TC1": {
         "label": "D-STORM-SpMM-Cython",
-        "time": 0.2842664001509547,
+        "time": 0.2764699999243021,
         "check": "PASS"
       },
       "TC2": {
         "label": "D-STORM-NumpyBLAS",
-        "time": 0.30587670020759106,
+        "time": 0.30056439992040396,
         "check": "PASS"
       },
       "BG1": {
         "label": "GPU-PerSrc-BFS",
-        "time": 0.005886800121515989,
+        "time": 0.005495500052347779,
+        "check": "PASS"
+      },
+      "BG2": {
+        "label": "DAWN-SOVM",
+        "time": 0.0055234001483768225,
         "check": "PASS"
       },
       "TG1": {
-        "label": "D-STORM-cuBLAS",
-        "time": 0.0285671001765877,
+        "label": "D-STORM-DAWN",
+        "time": 0.019039100036025047,
         "check": "PASS"
       },
       "TG2": {
         "label": "D-STORM-CUDA",
-        "time": 0.004989400040358305,
+        "time": 0.004628799855709076,
         "check": "PASS"
       }
     }
@@ -129,52 +139,57 @@
     "results": {
       "BC1": {
         "label": "NetworkX",
-        "time": 1.21782479993999,
+        "time": 1.2178435998503119,
         "check": "ref"
       },
       "BC2": {
         "label": "SciPy",
-        "time": 0.2905124998651445,
+        "time": 0.29070509993471205,
         "check": "PASS"
       },
       "BC3": {
         "label": "I-AORM",
-        "time": 0.5204096001107246,
+        "time": 0.511526099871844,
         "check": "PASS"
       },
       "BC4": {
         "label": "M-AORM",
-        "time": 0.620913399849087,
+        "time": 0.5787847999017686,
         "check": "PASS"
       },
       "BC5": {
         "label": "GB-bfs",
-        "time": 1.238092000130564,
+        "time": 1.2577372000087053,
         "check": "PASS"
       },
       "TC1": {
         "label": "D-STORM-SpMM-Cython",
-        "time": 0.29083249997347593,
+        "time": 0.2902124999091029,
         "check": "PASS"
       },
       "TC2": {
         "label": "D-STORM-NumpyBLAS",
-        "time": 0.44579700008034706,
+        "time": 0.4405741998925805,
         "check": "PASS"
       },
       "BG1": {
         "label": "GPU-PerSrc-BFS",
-        "time": 0.005877200048416853,
+        "time": 0.0053149000741541386,
+        "check": "PASS"
+      },
+      "BG2": {
+        "label": "DAWN-SOVM",
+        "time": 0.005397300003096461,
         "check": "PASS"
       },
       "TG1": {
-        "label": "D-STORM-cuBLAS",
-        "time": 0.02968649985268712,
+        "label": "D-STORM-DAWN",
+        "time": 0.008767100051045418,
         "check": "PASS"
       },
       "TG2": {
         "label": "D-STORM-CUDA",
-        "time": 0.004375899909064174,
+        "time": 0.00797710008919239,
         "check": "PASS"
       }
     }
@@ -189,52 +204,57 @@
     "results": {
       "BC1": {
         "label": "NetworkX",
-        "time": 1.3657700000330806,
+        "time": 1.3661112000700086,
         "check": "ref"
       },
       "BC2": {
         "label": "SciPy",
-        "time": 0.3135283999145031,
+        "time": 0.31361610000021756,
         "check": "PASS"
       },
       "BC3": {
         "label": "I-AORM",
-        "time": 0.4493896998465061,
+        "time": 0.43008099985308945,
         "check": "PASS"
       },
       "BC4": {
         "label": "M-AORM",
-        "time": 0.5009207001421601,
+        "time": 0.4674124999437481,
         "check": "PASS"
       },
       "BC5": {
         "label": "GB-bfs",
-        "time": 1.2482992999721318,
+        "time": 1.1764483000151813,
         "check": "PASS"
       },
       "TC1": {
         "label": "D-STORM-SpMM-Cython",
-        "time": 0.3161243998911232,
+        "time": 0.29969339980743825,
         "check": "PASS"
       },
       "TC2": {
         "label": "D-STORM-NumpyBLAS",
-        "time": 0.35943079995922744,
+        "time": 0.342887100065127,
         "check": "PASS"
       },
       "BG1": {
         "label": "GPU-PerSrc-BFS",
-        "time": 0.0064338999800384045,
+        "time": 0.005488799884915352,
+        "check": "PASS"
+      },
+      "BG2": {
+        "label": "DAWN-SOVM",
+        "time": 0.0062114999163895845,
         "check": "PASS"
       },
       "TG1": {
-        "label": "D-STORM-cuBLAS",
-        "time": 0.03009549994021654,
+        "label": "D-STORM-DAWN",
+        "time": 0.011664299992844462,
         "check": "PASS"
       },
       "TG2": {
         "label": "D-STORM-CUDA",
-        "time": 0.004866000032052398,
+        "time": 0.004931999836117029,
         "check": "PASS"
       }
     }
@@ -249,52 +269,57 @@
     "results": {
       "BC1": {
         "label": "NetworkX",
-        "time": 1.0891857000533491,
+        "time": 1.0307050999253988,
         "check": "ref"
       },
       "BC2": {
         "label": "SciPy",
-        "time": 0.1669046999886632,
+        "time": 0.16092519997619092,
         "check": "PASS"
       },
       "BC3": {
         "label": "I-AORM",
-        "time": 4.397243000101298,
+        "time": 4.461202900158241,
         "check": "PASS"
       },
       "BC4": {
         "label": "M-AORM",
-        "time": 5.276170500088483,
+        "time": 5.4339471000712365,
         "check": "PASS"
       },
       "BC5": {
         "label": "GB-bfs",
-        "time": 3.4121780002024025,
+        "time": 3.5902049001306295,
         "check": "PASS"
       },
       "TC1": {
         "label": "D-STORM-SpMM-Cython",
-        "time": 0.13456730009056628,
+        "time": 0.15900329989381135,
         "check": "PASS"
       },
       "TC2": {
         "label": "D-STORM-NumpyBLAS",
-        "time": 3.532323099905625,
+        "time": 3.6325429000426084,
         "check": "PASS"
       },
       "BG1": {
         "label": "GPU-PerSrc-BFS",
-        "time": 0.0072333000134676695,
+        "time": 0.005950799910351634,
+        "check": "PASS"
+      },
+      "BG2": {
+        "label": "DAWN-SOVM",
+        "time": 0.005844800034537911,
         "check": "PASS"
       },
       "TG1": {
-        "label": "D-STORM-cuBLAS",
-        "time": 0.09684290015138686,
+        "label": "D-STORM-DAWN",
+        "time": 0.03215619991533458,
         "check": "PASS"
       },
       "TG2": {
         "label": "D-STORM-CUDA",
-        "time": 0.013329799985513091,
+        "time": 0.01620139996521175,
         "check": "PASS"
       }
     }
@@ -309,52 +334,57 @@
     "results": {
       "BC1": {
         "label": "NetworkX",
-        "time": 1.1566712001804262,
+        "time": 1.2194784001912922,
         "check": "ref"
       },
       "BC2": {
         "label": "SciPy",
-        "time": 0.3131852000951767,
+        "time": 0.3129256998654455,
         "check": "PASS"
       },
       "BC3": {
         "label": "I-AORM",
-        "time": 0.3970845998264849,
+        "time": 0.3968332998920232,
         "check": "PASS"
       },
       "BC4": {
         "label": "M-AORM",
-        "time": 0.41188489994965494,
+        "time": 0.3902785999234766,
         "check": "PASS"
       },
       "BC5": {
         "label": "GB-bfs",
-        "time": 1.1329046001192182,
+        "time": 1.1881138999015093,
         "check": "PASS"
       },
       "TC1": {
         "label": "D-STORM-SpMM-Cython",
-        "time": 0.2809064001776278,
+        "time": 0.28361829998902977,
         "check": "PASS"
       },
       "TC2": {
         "label": "D-STORM-NumpyBLAS",
-        "time": 0.30403629993088543,
+        "time": 0.3123099999502301,
         "check": "PASS"
       },
       "BG1": {
         "label": "GPU-PerSrc-BFS",
-        "time": 0.006020799977704883,
+        "time": 0.0034117999020963907,
+        "check": "PASS"
+      },
+      "BG2": {
+        "label": "DAWN-SOVM",
+        "time": 0.0029657999984920025,
         "check": "PASS"
       },
       "TG1": {
-        "label": "D-STORM-cuBLAS",
-        "time": 0.028763899812474847,
+        "label": "D-STORM-DAWN",
+        "time": 0.015787999844178557,
         "check": "PASS"
       },
       "TG2": {
         "label": "D-STORM-CUDA",
-        "time": 0.004681099904701114,
+        "time": 0.005423499969765544,
         "check": "PASS"
       }
     }

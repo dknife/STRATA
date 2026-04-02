@@ -240,6 +240,32 @@ BC1 & NetworkX & 14.073 & 1.147 & 1.218 & 1.366 & 1.031 & 1.220 \\
 \end{tabular}}
 \end{table}
 
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xbar, width=0.88\textwidth, height=7cm, bar width=9pt,
+  xlabel={Facebook 실행 시간 (초, log scale)},
+  symbolic y coords={TC1,TC2,TC3,BC2,BC4,BC5,BC3,BC1},
+  ytick=data,
+  yticklabels={D-STORM-SpMM-Cython,D-STORM-NumpyBLAS,D-STORM-GraphBLAS,SciPy,M-AORM,GB-bfs,I-AORM,NetworkX},
+  xmin=0.1, xmax=20, xmode=log,
+  enlarge y limits={abs=8pt},
+  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
+  nodes near coords style={font=\scriptsize, anchor=west},
+  y tick label style={font=\small},
+  log ticks with fixed point,
+]
+\addplot[fill=blue!40, draw=blue!60!black, forget plot]
+  coordinates {(0.984,TC1) (1.697,TC2) (1.921,TC3)};
+\addplot[fill=orange!18, draw=orange!50!black, bar shift=0pt, forget plot]
+  coordinates {(1.918,BC2) (2.831,BC4) (4.071,BC5) (8.693,BC3) (14.073,BC1)};
+\end{axis}
+\end{tikzpicture}
+\caption{위상별 CPU 기법 --- Facebook 대표 비교 (log scale). TC1이 모든 위상에서 CPU 최고.}
+\label{fig:topo-cpu}
+\end{figure}
+
 \subsection{위상별 비교 --- GPU 기법}
 
 \begin{table}[H]\centering
@@ -257,6 +283,32 @@ TG1 & D-STORM-DAWNiBFS & 0.247 & 0.019 & \textbf{0.009} & 0.012 & 0.032 & 0.016 
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xbar, width=0.88\textwidth, height=5cm, bar width=10pt,
+  xlabel={Facebook 실행 시간 (초, log scale)},
+  symbolic y coords={BG1,BG2,TG2,TG1},
+  ytick=data,
+  yticklabels={GPU-PerSrc-BFS,DAWN-SOVM,D-STORM-CUDA,D-STORM-DAWNiBFS},
+  xmin=0.01, xmax=0.4, xmode=log,
+  enlarge y limits={abs=10pt},
+  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
+  nodes near coords style={font=\scriptsize, anchor=west},
+  y tick label style={font=\small},
+  log ticks with fixed point,
+]
+\addplot[fill=yellow!50, draw=yellow!70!black, forget plot]
+  coordinates {(0.016,BG1) (0.019,BG2)};
+\addplot[fill=purple!40, draw=purple!60!black, bar shift=0pt, forget plot]
+  coordinates {(0.028,TG2) (0.247,TG1)};
+\end{axis}
+\end{tikzpicture}
+\caption{위상별 GPU 기법 --- Facebook 대표 비교 (log scale). BG1/BG2/TG2가 Tier~1.}
+\label{fig:topo-gpu}
+\end{figure}
 
 \subsection{전체 순위 --- CPU (6개 그래프 총합)}
 
@@ -280,6 +332,31 @@ TG1 & D-STORM-DAWNiBFS & 0.247 & 0.019 & \textbf{0.009} & 0.012 & 0.032 & 0.016 
 \end{tabular}
 \end{table}
 
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xbar, width=0.88\textwidth, height=7cm, bar width=9pt,
+  xlabel={6개 그래프 총합 (초)},
+  symbolic y coords={TC1,BC2,TC3,TC2,BC4,BC5,BC3,BC1},
+  ytick=data,
+  yticklabels={D-STORM-SpMM-Cython,SciPy,D-STORM-GraphBLAS,D-STORM-NumpyBLAS,M-AORM,GB-bfs,I-AORM,NetworkX},
+  xmin=0, xmax=22,
+  enlarge y limits={abs=8pt},
+  nodes near coords={\pgfmathprintnumber[precision=2]{\pgfplotspointmeta}},
+  nodes near coords style={font=\scriptsize, anchor=west},
+  y tick label style={font=\small},
+]
+\addplot[fill=blue!40, draw=blue!60!black, forget plot]
+  coordinates {(2.293,TC1) (4.429,TC3) (6.726,TC2)};
+\addplot[fill=orange!18, draw=orange!50!black, bar shift=0pt, forget plot]
+  coordinates {(3.305,BC2) (10.102,BC4) (12.428,BC5) (14.885,BC3) (20.054,BC1)};
+\end{axis}
+\end{tikzpicture}
+\caption{CPU 8기법 총합. TC1이 CPU 내 최고 (2.293s).}
+\label{fig:grand-cpu}
+\end{figure}
+
 \subsection{전체 순위 --- GPU (6개 그래프 총합)}
 
 \begin{table}[H]\centering
@@ -297,6 +374,31 @@ TG1 & D-STORM-DAWNiBFS & 0.247 & 0.019 & \textbf{0.009} & 0.012 & 0.032 & 0.016 
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xbar, width=0.88\textwidth, height=4.5cm, bar width=10pt,
+  xlabel={6개 그래프 총합 (초)},
+  symbolic y coords={BG1,BG2,TG2,TG1},
+  ytick=data,
+  yticklabels={GPU-PerSrc-BFS,DAWN-SOVM,D-STORM-CUDA,D-STORM-DAWNiBFS},
+  xmin=0, xmax=0.40,
+  enlarge y limits={abs=10pt},
+  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
+  nodes near coords style={font=\scriptsize, anchor=west},
+  y tick label style={font=\small},
+]
+\addplot[fill=yellow!50, draw=yellow!70!black, forget plot]
+  coordinates {(0.041,BG1) (0.045,BG2)};
+\addplot[fill=purple!40, draw=purple!60!black, bar shift=0pt, forget plot]
+  coordinates {(0.068,TG2) (0.334,TG1)};
+\end{axis}
+\end{tikzpicture}
+\caption{GPU 4기법 총합. BG1/BG2가 Tier~1, TG2가 Tier~1 근접, TG1이 Tier~2.}
+\label{fig:grand-gpu}
+\end{figure}
 
 %======================================================================
 \section{스케일링 분석}
@@ -323,6 +425,37 @@ $n$ & \textbf{BG1} & \textbf{BG2} & \textbf{TG1} & \textbf{TG2} \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.92\textwidth, height=7cm,
+  xlabel={$n$ (정점 수)}, ylabel={실행 시간 (초, log scale)},
+  xmin=800, xmax=22000,
+  ymin=0.0008, ymax=20, ymode=log,
+  log ticks with fixed point,
+  legend style={at={(0.02,0.98)}, anchor=north west, font=\small},
+  grid=major, grid style={gray!30},
+  mark size=2.5pt,
+]
+\addplot[color=yellow!70!black, mark=square*, thick] coordinates
+  {(1000,0.001)(2000,0.003)(4000,0.011)(6000,0.023)(8000,0.043)(10000,0.067)(15000,0.156)(20000,0.263)};
+\addlegendentry{BG1 GPU-PerSrc-BFS}
+\addplot[color=orange!80!black, mark=triangle*, thick] coordinates
+  {(1000,0.001)(2000,0.003)(4000,0.010)(6000,0.025)(8000,0.045)(10000,0.072)(15000,0.167)(20000,0.281)};
+\addlegendentry{BG2 DAWN-SOVM}
+\addplot[color=blue!70!black, mark=diamond*, thick] coordinates
+  {(1000,0.006)(2000,0.016)(4000,0.052)(6000,0.100)(8000,0.163)(10000,0.238)(15000,0.487)(20000,0.805)};
+\addlegendentry{TG1 D-STORM-DAWNiBFS}
+\addplot[color=red!70!black, mark=o, thick] coordinates
+  {(1000,0.002)(2000,0.005)(4000,0.019)(6000,0.062)(8000,0.123)(10000,0.211)(15000,0.454)(20000,12.784)};
+\addlegendentry{TG2 D-STORM-CUDA}
+\end{axis}
+\end{tikzpicture}
+\caption{GPU 4기법 스케일링 (BA graphs, log scale). TG2는 $n\!=\!20{,}000$에서 메모리 절벽 (12.8초).}
+\label{fig:scaling}
+\end{figure}
 
 \paragraph{분석.}
 \begin{itemize}[leftmargin=1.4em]
@@ -380,6 +513,32 @@ BG1 PerSrc-BFS & 모든 행렬 프레임워크 제거 & \textbf{0.016} & \textbf
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xbar, width=0.88\textwidth, height=5cm, bar width=10pt,
+  xlabel={실행 시간 (초, log scale)},
+  symbolic y coords={BG1,TG1,TG2,GPU-Sparse},
+  ytick=data,
+  yticklabels={Per-source BFS (BG1),DAWNiBFS (TG1),DirectExpand (TG2),GPU-Sparse (cuSPARSE)},
+  xmin=0.01, xmax=0.3, xmode=log,
+  enlarge y limits={abs=10pt},
+  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
+  nodes near coords style={font=\scriptsize, anchor=west},
+  y tick label style={font=\small},
+  log ticks with fixed point,
+]
+\addplot[fill=yellow!50, draw=yellow!70!black, forget plot]
+  coordinates {(0.016,BG1)};
+\addplot[fill=purple!40, draw=purple!60!black, bar shift=0pt, forget plot]
+  coordinates {(0.247,TG1) (0.028,TG2) (0.192,GPU-Sparse)};
+\end{axis}
+\end{tikzpicture}
+\caption{D-STORM GPU 최적화 경로 (Facebook, log scale). SpMM 제거가 가장 큰 개선.}
+\label{fig:convergence}
+\end{figure}
 
 각 단계는 행렬 대수적 간접성을 제거한다: SpMM $\to$ CSR 직접 순회 $\to$ frontier 공유 $\to$ 독립 BFS. TG1과 BG1의 2.7배 격차는 공유 footprint(atomicOr), per-hop 동기화, 배치 관리라는 \textbf{구조적 한계}이며, 엔지니어링 격차가 아니다.
 

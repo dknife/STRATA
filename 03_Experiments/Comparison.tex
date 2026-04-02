@@ -245,16 +245,15 @@ BC1 & NetworkX & 14.073 & 1.147 & 1.218 & 1.366 & 1.031 & 1.220 \\
 \begin{tikzpicture}
 \begin{axis}[
   xbar, width=0.88\textwidth, height=7cm, bar width=9pt,
-  xlabel={Facebook 실행 시간 (초, log scale)},
+  xlabel={실행 시간 (초)},
   symbolic y coords={TC1,TC2,TC3,BC2,BC4,BC5,BC3,BC1},
   ytick=data,
   yticklabels={D-STORM-SpMM-Cython,D-STORM-NumpyBLAS,D-STORM-GraphBLAS,SciPy,M-AORM,GB-bfs,I-AORM,NetworkX},
-  xmin=0.1, xmax=20, xmode=log,
+  xmin=0, xmax=16,
   enlarge y limits={abs=8pt},
   nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
   nodes near coords style={font=\scriptsize, anchor=west},
   y tick label style={font=\small},
-  log ticks with fixed point,
 ]
 \addplot[fill=blue!40, draw=blue!60!black, forget plot]
   coordinates {(0.984,TC1) (1.697,TC2) (1.921,TC3)};
@@ -262,7 +261,7 @@ BC1 & NetworkX & 14.073 & 1.147 & 1.218 & 1.366 & 1.031 & 1.220 \\
   coordinates {(1.918,BC2) (2.831,BC4) (4.071,BC5) (8.693,BC3) (14.073,BC1)};
 \end{axis}
 \end{tikzpicture}
-\caption{위상별 CPU 기법 --- Facebook 대표 비교 (log scale). TC1이 모든 위상에서 CPU 최고.}
+\caption{위상별 CPU 기법 --- Facebook 대표 비교. TC1이 모든 위상에서 CPU 최고.}
 \label{fig:topo-cpu}
 \end{figure}
 
@@ -289,16 +288,15 @@ TG1 & D-STORM-DAWNiBFS & 0.247 & 0.019 & \textbf{0.009} & 0.012 & 0.032 & 0.016 
 \begin{tikzpicture}
 \begin{axis}[
   xbar, width=0.88\textwidth, height=5cm, bar width=10pt,
-  xlabel={Facebook 실행 시간 (초, log scale)},
+  xlabel={실행 시간 (초)},
   symbolic y coords={BG1,BG2,TG2,TG1},
   ytick=data,
   yticklabels={GPU-PerSrc-BFS,DAWN-SOVM,D-STORM-CUDA,D-STORM-DAWNiBFS},
-  xmin=0.01, xmax=0.4, xmode=log,
+  xmin=0, xmax=0.30,
   enlarge y limits={abs=10pt},
   nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
   nodes near coords style={font=\scriptsize, anchor=west},
   y tick label style={font=\small},
-  log ticks with fixed point,
 ]
 \addplot[fill=yellow!50, draw=yellow!70!black, forget plot]
   coordinates {(0.016,BG1) (0.019,BG2)};
@@ -306,7 +304,7 @@ TG1 & D-STORM-DAWNiBFS & 0.247 & 0.019 & \textbf{0.009} & 0.012 & 0.032 & 0.016 
   coordinates {(0.028,TG2) (0.247,TG1)};
 \end{axis}
 \end{tikzpicture}
-\caption{위상별 GPU 기법 --- Facebook 대표 비교 (log scale). BG1/BG2/TG2가 Tier~1.}
+\caption{위상별 GPU 기법 --- Facebook 대표 비교. BG1/BG2/TG2가 Tier~1.}
 \label{fig:topo-gpu}
 \end{figure}
 

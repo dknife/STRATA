@@ -527,17 +527,18 @@ TG1 & D[$n^2$] + batch 버퍼 & $\sim 4.25n^2$ & 1.7 GB \\
 \subsection{D-STORM 최적화 경로: per-source BFS로의 수렴}
 
 \begin{table}[H]\centering
-\caption{D-STORM GPU 최적화 경로 (Facebook 기준)}
+\caption{D-STORM GPU 최적화 경로 --- Facebook ($n\!=\!4{,}039$) vs BA-20K ($n\!=\!20{,}000$)}
 \label{tab:convergence}
 \small
-\begin{tabular}{@{}llrr@{}}
+\begin{tabular}{@{}llrrrr@{}}
 \toprule
-\textbf{단계} & \textbf{변경} & \textbf{시간 (s)} & \textbf{개선} \\
+ & & \multicolumn{2}{c}{\textbf{Facebook}} & \multicolumn{2}{c}{\textbf{BA-20K}} \\
+\cmidrule(lr){3-4} \cmidrule(lr){5-6}
+\textbf{단계} & \textbf{변경} & \textbf{시간} & \textbf{개선} & \textbf{시간} & \textbf{개선} \\
 \midrule
-GPU-Sparse & cuSPARSE SpMM + sparse prune & 0.192 & 1.0$\times$ \\
-TG2 DirectExpand & SpMM $\to$ CSR 직접 확장 (guard+CAS) & 0.028 & 6.9$\times$ \\
-TG1 DAWNiBFS & 비트 압축 frontier 공유 & 0.247 & 0.8$\times$ \\
-BG1 PerSrc-BFS & 모든 행렬 프레임워크 제거 & \textbf{0.016} & \textbf{12.0$\times$} \\
+TG2 DirectExpand & CSR 직접 확장 (guard+CAS) & 0.028s & --- & 12.784s & --- \\
+TG1 DAWNiBFS & 비트 압축 frontier 공유 & 0.247s & 0.1$\times$ & \textbf{0.805s} & \textbf{15.9$\times$} \\
+BG1 PerSrc-BFS & 프레임워크 전체 제거 & \textbf{0.016s} & 1.8$\times$ & \textbf{0.263s} & \textbf{48.6$\times$} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -547,34 +548,32 @@ BG1 PerSrc-BFS & 모든 행렬 프레임워크 제거 & \textbf{0.016} & \textbf
 \begin{tikzpicture}
 \begin{axis}[
   xbar, width=0.88\textwidth, height=5.5cm, bar width=10pt,
-  xlabel={실행 시간 (초)},
-  symbolic y coords={BG1,TG2,TG1,GPU-Sparse},
+  xlabel={BA-20K 실행 시간 (초)},
+  symbolic y coords={BG1,TG1,TG2},
   ytick=data,
-  yticklabels={BG1 Per-source BFS (0.016s),TG2 DirectExpand (0.028s),TG1 DAWNiBFS (0.247s),GPU-Sparse cuSPARSE (0.192s)},
-  xmin=0, xmax=0.28,
-  enlarge y limits={abs=10pt},
-  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}s},
+  yticklabels={BG1 Per-source BFS,TG1 DAWNiBFS,TG2 DirectExpand},
+  xmin=0, xmax=14,
+  enlarge y limits={abs=12pt},
+  nodes near coords={\pgfmathprintnumber[precision=2]{\pgfplotspointmeta}s},
   nodes near coords style={font=\scriptsize, anchor=west},
   y tick label style={font=\small},
 ]
 \addplot[fill=yellow!50, draw=yellow!70!black, forget plot]
-  coordinates {(0.016,BG1)};
-\addplot[fill=purple!60, draw=purple!80!black, bar shift=0pt, forget plot]
-  coordinates {(0.028,TG2)};
+  coordinates {(0.263,BG1)};
 \addplot[fill=purple!30, draw=purple!50!black, bar shift=0pt, forget plot]
-  coordinates {(0.247,TG1)};
-\addplot[fill=gray!40, draw=gray!60!black, bar shift=0pt, forget plot]
-  coordinates {(0.192,GPU-Sparse)};
+  coordinates {(0.805,TG1)};
+\addplot[fill=red!30, draw=red!60!black, bar shift=0pt, forget plot]
+  coordinates {(12.784,TG2)};
 \end{axis}
-% Arrows showing optimization path
-\draw[->, thick, red!70!black] (1.8, 0.55) -- (1.8, 1.35) node[midway, right, font=\scriptsize] {6.9$\times$};
-\draw[->, thick, blue!70!black] (0.65, 2.2) -- (0.65, 3.05) node[midway, right, font=\scriptsize] {12$\times$};
 \end{tikzpicture}
-\caption{D-STORM GPU 최적화 경로 (Facebook). GPU-Sparse에서 SpMM 제거(TG2)가 6.9배, 프레임워크 전체 제거(BG1)가 12배 개선.}
+\caption{D-STORM GPU 최적화 경로 (BA $n\!=\!20{,}000$). TG2는 메모리 절벽(12.8s)으로 실용 한계 도달. TG1은 비트 압축으로 15.9배 개선(0.81s). BG1은 프레임워크 제거로 48.6배(0.26s).}
 \label{fig:convergence}
 \end{figure}
 
-각 단계는 행렬 대수적 간접성을 제거한다: SpMM $\to$ CSR 직접 순회 $\to$ frontier 공유 $\to$ 독립 BFS. TG1과 BG1의 2.7배 격차는 공유 footprint(atomicOr), per-hop 동기화, 배치 관리라는 \textbf{구조적 한계}이며, 엔지니어링 격차가 아니다.
+\paragraph{분석.}
+$n = 4{,}039$ (Facebook)에서는 TG2(0.028s)가 TG1(0.247s)보다 빠르다. 그러나 $n = 20{,}000$ (BA-20K)으로 확대하면 TG2가 메모리 절벽(12.8s)에 부딪혀 TG1(0.81s) 대비 15.9배 느려진다. 이는 TG2의 dense $16n^2$ 버퍼가 GPU VRAM을 초과하기 때문이다.
+
+TG1(DAWNiBFS)은 비트 압축으로 메모리를 75\% 절감하여 대규모에서 안정 동작하나, BG1(0.26s) 대비 3.1배 느리다. 이 격차는 D-STORM 프레임워크의 구조적 비용(배치 루프, per-hop sync, atomicOr)이며 엔지니어링이 아닌 \textbf{구조적 한계}이다.
 
 %======================================================================
 \section{연구 기여}

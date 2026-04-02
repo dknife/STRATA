@@ -609,4 +609,42 @@ TG1(DAWNiBFS)은 비트 압축으로 메모리를 75\% 절감하여 대규모에
 \end{itemize}
 \end{tcolorbox}
 
+%======================================================================
+\section{향후 연구: D-STORM 동적 갱신의 응용}
+%======================================================================
+
+D-STORM의 동적 간선 삽입($D'_{ij} = \min(D_{ij}, D_{ia}+1+D_{bj})$, $O(n^2)$)은 full APSP 재계산($O(n \cdot m)$) 대비 22--33배 빠르며, per-source BFS로 대체할 수 없는 고유 기능이다. 이 기능이 실질적 가치를 갖는 응용 분야를 정리한다.
+
+\begin{tcolorbox}[colback=gray!3, colframe=gray!60!black, title=동적 갱신 응용 계획, breakable]
+\begin{description}[style=nextline, leftmargin=1.2em, labelwidth=0em, font=\bfseries]
+
+\item[1. 소셜 네트워크 실시간 영향력 분석]
+새로운 친구 관계(간선)가 추가될 때마다 전체 사용자 간 거리가 변화한다. Closeness centrality, betweenness centrality 등 거리 기반 지표가 간선 추가마다 변동하므로, 영향력 순위의 실시간 추적이 필요하다. 간선 100개 연속 추가 시 BFS 전체 재계산은 $100 \times O(n \cdot m)$이나, D-STORM 증분 갱신은 $100 \times O(n^2)$으로 1--2자릿수 빠르다.
+
+\item[2. 교통/물류 네트워크 경로 갱신]
+새 도로 개통, 노선 신설 등 네트워크 구조 변경 시 모든 지점 간 최단 경로를 즉시 반영해야 하는 실시간 경로 안내 시스템. 간선 추가가 빈번하고 전체 재계산 비용이 큰 환경에서 D-STORM의 증분 갱신이 유리하다. 특히 소세계 특성을 가진 도시 교통 네트워크(d $\leq$ 10)에서 효과적이다.
+
+\item[3. 통신 네트워크 토폴로지 관리]
+SDN(Software-Defined Networking) 환경에서 라우터/링크 추가 시 라우팅 테이블 갱신, 장애 복구 후 링크 재연결 시 경로 재계산 등에 활용 가능하다. 네트워크 규모가 수천 노드이고 변경이 빈번한 데이터센터 환경에 적합하다.
+
+\item[4. 전염병 확산 경로 추적]
+접촉 네트워크에서 새 접촉(간선)이 발생할 때마다 감염 경로 거리를 갱신하여 감염 위험도를 실시간 평가한다. 접촉 추적 시스템에서 접촉 이벤트는 연속적으로 발생하므로, 매 이벤트마다 전체 BFS를 수행하는 것은 비현실적이다.
+
+\item[5. 금융 거래 네트워크 위험 전파 분석]
+금융 기관 간 거래 관계가 신설될 때 시스템 리스크 전파 경로의 변화를 추적한다. 새 거래 관계(간선)의 추가가 전체 네트워크 연결성과 위험 전파 거리에 미치는 영향을 실시간으로 평가할 수 있다.
+
+\end{description}
+
+\paragraph{공통 특성.}
+위 응용들은 (1) 간선이 \textbf{연속적으로 추가}되고, (2) 추가 즉시 \textbf{전체 거리 행렬 갱신}이 필요하며, (3) \textbf{소세계 구조}($d \leq 10$)를 가진다는 공통점이 있다. 이 조건에서 D-STORM의 $O(n^2)$ 증분 갱신은 $O(n \cdot m)$ 전체 재계산 대비 1--2자릿수 빠르다.
+
+\paragraph{향후 실험 계획.}
+\begin{enumerate}[leftmargin=1.4em]
+  \item 실제 시계열 소셜 네트워크 데이터(예: Temporal Facebook, arXiv collaboration)에서 간선 스트림 처리 성능 측정.
+  \item 간선 추가 빈도(초당 간선 수)에 따른 BFS 재계산 vs D-STORM 증분 갱신의 처리량(throughput) 비교.
+  \item D-STORM 동적 갱신의 GPU 구현(TG1/TG2 기반)으로 대규모 동적 그래프 대응.
+  \item 간선 \textbf{삭제}에 대한 D-STORM 확장 연구 --- 현재는 삽입만 지원하며, 삭제 시에는 전체 재계산이 필요.
+\end{enumerate}
+\end{tcolorbox}
+
 \end{document}

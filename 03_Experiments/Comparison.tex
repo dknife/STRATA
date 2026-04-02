@@ -546,25 +546,31 @@ BG1 PerSrc-BFS & 모든 행렬 프레임워크 제거 & \textbf{0.016} & \textbf
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-  xbar, width=0.88\textwidth, height=5cm, bar width=10pt,
-  xlabel={실행 시간 (초, log scale)},
-  symbolic y coords={BG1,TG1,TG2,GPU-Sparse},
+  xbar, width=0.88\textwidth, height=5.5cm, bar width=10pt,
+  xlabel={실행 시간 (초)},
+  symbolic y coords={BG1,TG2,TG1,GPU-Sparse},
   ytick=data,
-  yticklabels={Per-source BFS (BG1),DAWNiBFS (TG1),DirectExpand (TG2),GPU-Sparse (cuSPARSE)},
-  xmin=0.01, xmax=0.3, xmode=log,
+  yticklabels={BG1 Per-source BFS (0.016s),TG2 DirectExpand (0.028s),TG1 DAWNiBFS (0.247s),GPU-Sparse cuSPARSE (0.192s)},
+  xmin=0, xmax=0.28,
   enlarge y limits={abs=10pt},
-  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
+  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}s},
   nodes near coords style={font=\scriptsize, anchor=west},
   y tick label style={font=\small},
-  log ticks with fixed point,
 ]
 \addplot[fill=yellow!50, draw=yellow!70!black, forget plot]
   coordinates {(0.016,BG1)};
-\addplot[fill=purple!40, draw=purple!60!black, bar shift=0pt, forget plot]
-  coordinates {(0.247,TG1) (0.028,TG2) (0.192,GPU-Sparse)};
+\addplot[fill=purple!60, draw=purple!80!black, bar shift=0pt, forget plot]
+  coordinates {(0.028,TG2)};
+\addplot[fill=purple!30, draw=purple!50!black, bar shift=0pt, forget plot]
+  coordinates {(0.247,TG1)};
+\addplot[fill=gray!40, draw=gray!60!black, bar shift=0pt, forget plot]
+  coordinates {(0.192,GPU-Sparse)};
 \end{axis}
+% Arrows showing optimization path
+\draw[->, thick, red!70!black] (1.8, 0.55) -- (1.8, 1.35) node[midway, right, font=\scriptsize] {6.9$\times$};
+\draw[->, thick, blue!70!black] (0.65, 2.2) -- (0.65, 3.05) node[midway, right, font=\scriptsize] {12$\times$};
 \end{tikzpicture}
-\caption{D-STORM GPU 최적화 경로 (Facebook, log scale). SpMM 제거가 가장 큰 개선.}
+\caption{D-STORM GPU 최적화 경로 (Facebook). GPU-Sparse에서 SpMM 제거(TG2)가 6.9배, 프레임워크 전체 제거(BG1)가 12배 개선.}
 \label{fig:convergence}
 \end{figure}
 

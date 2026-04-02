@@ -649,7 +649,27 @@ SDN(Software-Defined Networking) 환경에서 라우터/링크 추가 시 라우
 
 \subsection{간선 삭제 알고리즘 설계}
 
-간선 삽입은 거리가 감소만 하므로 $D'_{ij} = \min(D_{ij}, D_{ia}+1+D_{bj})$로 $O(n^2)$에 해결된다. 반면 간선 삭제는 거리가 증가할 수 있어, 삭제된 간선이 최단 경로에 사용되었는지 판정하고 대체 경로를 탐색해야 한다. 다음은 D-STORM의 거리 행렬 $D$를 활용한 효율적 삭제 알고리즘이다.
+간선 삽입은 거리가 감소만 하므로 $D'_{ij} = \min(D_{ij}, D_{ia}+1+D_{bj})$로 $O(n^2)$에 해결된다. 반면 간선 삭제는 거리가 증가할 수 있어, 삭제된 간선이 최단 경로에 사용되었는지 판정하고 대체 경로를 탐색해야 한다.
+
+본 알고리즘의 핵심인 ``대체 부모 체크''는 Even--Shiloach~\cite{even1981} 알고리즘에 기반한다. Even--Shiloach는 BFS 트리를 유지하며 간선 삭제 시 레벨 증가를 자식에게 점진적으로 전파하여 단일 소스에 대해 총 $O(m \cdot n)$을 달성한다. 본 설계는 이를 D-STORM의 거리 행렬 $D$에 적용한 \textbf{단순화 변형}으로, BFS 트리 유지 없이 $D$ 값만으로 영향 소스를 식별하고, 영향받는 소스에 대해서만 BFS 행을 재계산한다.
+
+\begin{table}[H]\centering
+\caption{관련 동적 APSP 알고리즘}
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{알고리즘} & \textbf{핵심 아이디어} & \textbf{복잡도} & \textbf{비고} \\
+\midrule
+Even--Shiloach (1981) & BFS 트리 + 대체 부모 + 레벨 전파 & $O(m \cdot n)$ 총합 & 단일 소스, 감소적 \\
+Ramalingam--Reps (1996) & 영향 정점만 재계산 & 영향 비례 & 삽입+삭제 \\
+Demetrescu--Italiano (2004) & 행렬 기반 완전 동적 & $O(n^2 \log^3 n)$ 상각 & 가중치 지원 \\
+\midrule
+\textbf{본 설계} & D-STORM $D$ + 대체 부모 + 부분 BFS & $O(n \cdot d + |A| \cdot m)$ & 구현 단순, $D$ 재활용 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Even--Shiloach 대비 본 설계의 차이점: (1) BFS 트리를 유지하지 않아 메모리 절약, (2) 레벨 전파 대신 영향 소스의 전체 행을 BFS로 재계산하여 구현이 단순, (3) D-STORM의 기존 거리 행렬 $D$를 직접 활용하여 별도 자료구조 불필요. 다만 레벨 전파가 없으므로 연쇄적 거리 증가 시 Even--Shiloach보다 비효율적일 수 있다.
 
 \paragraph{핵심 아이디어: 대체 부모 체크.}
 간선 $(a,b)$ 삭제 시, 소스 $s$에서 $b$까지의 최단 경로가 $(a,b)$를 사용했다면 $D(s,a)+1 = D(s,b)$이다. 이때 $b$의 이웃 중 $a$가 아닌 정점 $u$에 대해 $D(s,u) = D(s,b)-1$인 \textbf{대체 부모}가 존재하면, $(a,b)$ 없이도 같은 거리로 $b$에 도달 가능하므로 소스 $s$는 영향받지 않는다.
@@ -718,5 +738,11 @@ BFS 재계산 & $O(|\text{affected}| \cdot m)$ & 영향 소스만 BFS \\
   \item \textbf{삭제}: $O(n \cdot d + |\text{affected}| \cdot m)$ 대체 부모 체크 + 부분 BFS (제안).
   \item \textbf{조합}: 간선 스트림에서 삽입/삭제가 혼재하는 동적 네트워크에 대응.
 \end{itemize}
+
+\begin{thebibliography}{9}
+\bibitem{even1981} S. Even and Y. Shiloach, ``An On-line Edge-Deletion Problem,'' \textit{Journal of the ACM}, vol.~28, no.~1, pp.~1--4, 1981.
+\bibitem{ramalingam1996} G. Ramalingam and T. Reps, ``An Incremental Algorithm for a Generalization of the Shortest-Path Problem,'' \textit{Journal of Algorithms}, vol.~21, no.~2, pp.~267--305, 1996.
+\bibitem{demetrescu2004} C. Demetrescu and G.~F. Italiano, ``A New Approach to Dynamic All Pairs Shortest Paths,'' \textit{Journal of the ACM}, vol.~51, no.~6, pp.~968--992, 2004.
+\end{thebibliography}
 
 \end{document}

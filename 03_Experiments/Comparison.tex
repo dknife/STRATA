@@ -643,8 +643,80 @@ SDN(Software-Defined Networking) 환경에서 라우터/링크 추가 시 라우
   \item 실제 시계열 소셜 네트워크 데이터(예: Temporal Facebook, arXiv collaboration)에서 간선 스트림 처리 성능 측정.
   \item 간선 추가 빈도(초당 간선 수)에 따른 BFS 재계산 vs D-STORM 증분 갱신의 처리량(throughput) 비교.
   \item D-STORM 동적 갱신의 GPU 구현(TG1/TG2 기반)으로 대규모 동적 그래프 대응.
-  \item 간선 \textbf{삭제}에 대한 D-STORM 확장 연구 --- 현재는 삽입만 지원하며, 삭제 시에는 전체 재계산이 필요.
+  \item 간선 \textbf{삭제}에 대한 D-STORM 확장 연구 (아래 상세).
 \end{enumerate}
 \end{tcolorbox}
+
+\subsection{간선 삭제 알고리즘 설계}
+
+간선 삽입은 거리가 감소만 하므로 $D'_{ij} = \min(D_{ij}, D_{ia}+1+D_{bj})$로 $O(n^2)$에 해결된다. 반면 간선 삭제는 거리가 증가할 수 있어, 삭제된 간선이 최단 경로에 사용되었는지 판정하고 대체 경로를 탐색해야 한다. 다음은 D-STORM의 거리 행렬 $D$를 활용한 효율적 삭제 알고리즘이다.
+
+\paragraph{핵심 아이디어: 대체 부모 체크.}
+간선 $(a,b)$ 삭제 시, 소스 $s$에서 $b$까지의 최단 경로가 $(a,b)$를 사용했다면 $D(s,a)+1 = D(s,b)$이다. 이때 $b$의 이웃 중 $a$가 아닌 정점 $u$에 대해 $D(s,u) = D(s,b)-1$인 \textbf{대체 부모}가 존재하면, $(a,b)$ 없이도 같은 거리로 $b$에 도달 가능하므로 소스 $s$는 영향받지 않는다.
+
+\begin{tcolorbox}[colback=blue!3, colframe=blue!50!black, title=간선 삭제 알고리즘]
+\begin{verbatim}
+DELETE_EDGE(D, A, a, b):
+    A.remove_edge(a, b)
+    affected = []
+
+    for s in range(n):
+        # 방향 1: s -> ... -> a -> b
+        if D[s,a] + 1 == D[s,b]:
+            if not any(D[s,u]==D[s,b]-1 for u in neighbors(b) if u!=a):
+                affected.append(s); continue
+
+        # 방향 2: s -> ... -> b -> a
+        if D[s,b] + 1 == D[s,a]:
+            if not any(D[s,u]==D[s,a]-1 for u in neighbors(a) if u!=b):
+                affected.append(s)
+
+    # 영향받는 소스만 BFS 재계산
+    for s in affected:
+        D[s,:] = BFS(A, s)
+\end{verbatim}
+\end{tcolorbox}
+
+\paragraph{복잡도 분석.}
+
+\begin{table}[H]\centering
+\caption{간선 삭제 복잡도}
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{단계} & \textbf{복잡도} & \textbf{설명} \\
+\midrule
+영향 소스 식별 & $O(n \cdot d_{\text{avg}})$ & $n$개 소스 $\times$ 이웃 대체 부모 체크 \\
+BFS 재계산 & $O(|\text{affected}| \cdot m)$ & 영향 소스만 BFS \\
+\midrule
+\textbf{총합} & $O(n \cdot d + |\text{affected}| \cdot m)$ & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]\centering
+\caption{$|\text{affected}|$의 그래프 유형별 예상}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{시나리오} & $|\textbf{affected}|$ & \textbf{총 비용} \\
+\midrule
+소세계, 고연결 & $O(1)$ & $O(n \cdot d)$ --- 거의 공짜 \\
+소세계, 평균 & $O(\sqrt{n})$ & $O(n \cdot d + \sqrt{n} \cdot m)$ \\
+트리 (최악) & $O(n)$ & $O(n \cdot m)$ --- 전체 재계산과 동일 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{소세계 그래프에서의 유효성.}
+소세계 네트워크는 높은 클러스터링 계수를 가지므로, 대부분의 정점이 다수의 대체 경로를 보유한다. 따라서 간선 하나의 삭제가 최단 경로를 변경하는 소스의 비율($|\text{affected}|/n$)은 극히 낮을 것으로 예상된다. 이 가설은 향후 실제 시계열 소셜 네트워크 데이터에서 $|\text{affected}|$의 분포를 측정하여 검증할 예정이다.
+
+\paragraph{삽입+삭제 통합 프레임워크.}
+삽입과 삭제를 결합하면 D-STORM은 \textbf{완전 동적(fully dynamic)} APSP 시스템으로 확장된다:
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{삽입}: $O(n^2)$ 닫힌 형태 갱신 (기존).
+  \item \textbf{삭제}: $O(n \cdot d + |\text{affected}| \cdot m)$ 대체 부모 체크 + 부분 BFS (제안).
+  \item \textbf{조합}: 간선 스트림에서 삽입/삭제가 혼재하는 동적 네트워크에 대응.
+\end{itemize}
 
 \end{document}

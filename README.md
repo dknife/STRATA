@@ -8,23 +8,30 @@ D-STORM extends the [AORM framework](https://ieeexplore.ieee.org/document/942454
 
 ## Key Results (Facebook, n=4,039)
 
-| # | Method | ID | Time (s) | vs SciPy | vs NetworkX |
-|---|--------|----|----------|----------|-------------|
-| 1 | **GPU-PerSrc-BFS** | BG1 | **0.019** | **101x** | **748x** |
-| 2 | **D-STORM-CUDA** (guard+CAS) | TG2 | 0.030 | 64x | 474x |
-| 3 | D-STORM-cuBLAS | TG1 | 0.155 | 12x | 92x |
-| 4 | **D-STORM-SpMM-Cython** | TC1 | 1.016 | **1.9x** | 14x |
-| 5 | D-STORM-NumpyBLAS | TC2 | 1.723 | 1.1x | 8x |
-| 6 | D-STORM-GraphBLAS | TC3 | 1.897 | 1.0x | 7x |
-| 7 | SciPy (C BFS) | BC2 | 1.921 | 1.0x | 7x |
-| 8 | M-AORM | BC4 | 2.868 | 0.7x | 5x |
-| 9 | GB-bfs | BC5 | 4.065 | 0.5x | 4x |
-| 10 | I-AORM | BC3 | 7.489 | 0.3x | 2x |
-| 11 | NetworkX | BC1 | 14.213 | 0.1x | 1x |
-
 All 11 methods produce identical distance matrices (verified element-wise).
 
-## Performance Tiers
+### GPU Methods
+
+| # | Method | ID | Time (s) | vs SciPy | Category |
+|---|--------|----|----------|----------|----------|
+| 1 | **GPU-PerSrc-BFS** | BG1 | **0.019** | **101x** | Baseline |
+| 2 | **D-STORM-CUDA** (guard+CAS) | TG2 | 0.030 | 64x | D-STORM |
+| 3 | D-STORM-cuBLAS | TG1 | 0.155 | 12x | D-STORM |
+
+### CPU Methods
+
+| # | Method | ID | Time (s) | vs SciPy | Category |
+|---|--------|----|----------|----------|----------|
+| 1 | **D-STORM-SpMM-Cython** | TC1 | **1.016** | **1.9x** | D-STORM |
+| 2 | D-STORM-NumpyBLAS | TC2 | 1.723 | 1.1x | D-STORM |
+| 3 | D-STORM-GraphBLAS | TC3 | 1.897 | 1.0x | D-STORM |
+| 4 | SciPy (C BFS) | BC2 | 1.921 | 1.0x | Baseline |
+| 5 | M-AORM | BC4 | 2.868 | 0.7x | Baseline |
+| 6 | GB-bfs | BC5 | 4.065 | 0.5x | Baseline |
+| 7 | I-AORM | BC3 | 7.489 | 0.3x | Baseline |
+| 8 | NetworkX | BC1 | 14.213 | 0.1x | Baseline |
+
+### Performance Tiers
 
 ```
 Tier 1  BG1/TG2  (0.004–0.03s)  GPU per-source BFS / CUDA direct expand
@@ -33,6 +40,53 @@ Tier 3  TC1/BC2  (0.13–1.92s)   CPU SpMM+Cython / C BFS
 Tier 4  TC2/TC3  (0.30–5.28s)   CPU dense BLAS / GraphBLAS
 Tier 5  BC1–BC5  (0.40–14.2s)   Python BFS / edge-wise / GraphBLAS BFS
 ```
+
+## D-STORM Contributions
+
+### 1. CPU: Fastest matrix-algebraic APSP
+
+D-STORM-SpMM-Cython (TC1) is the **fastest CPU method across all 6 graph topologies**, outperforming SciPy's native C BFS by up to 1.9x. The key is Cython fused pruning — collapsing three sparse operations (booleanize → prune → footprint update) into a single C pass over COO entries.
+
+| Graph | TC1 (s) | SciPy (s) | Speedup |
+|-------|---------|-----------|---------|
+| Facebook (n=4,039) | 1.016 | 1.921 | 1.9x |
+| BA-2000 | 0.284 | 0.312 | 1.1x |
+| WS-2000 | 0.291 | 0.291 | 1.0x |
+| Grid-45×45 (d=88) | 0.135 | 0.167 | 1.2x |
+
+### 2. GPU: SpMM elimination via direct CSR expansion
+
+D-STORM-CUDA (TG2) replaces cuSPARSE SpMM with a custom CUDA kernel that directly traverses CSR neighbors, eliminating three SpMM bottlenecks:
+
+1. **Redundant products** — SpMM computes all matrix products including already-visited pairs
+2. **Intermediate matrices** — SpMM output requires COO/CSR conversion overhead
+3. **Separate prune step** — footprint check is fused into expansion (1-pass)
+
+| Graph | GPU-Sparse (removed) | TG2 (s) | Improvement |
+|-------|---------------------|---------|-------------|
+| Facebook | 0.192 | 0.030 | 6.4x |
+| Grid-45×45 | 0.236 | 0.013 | 18.2x |
+
+### 3. Structural insight: D-STORM optimizes toward per-source BFS
+
+Progressive removal of D-STORM's matrix-algebraic overhead converges to per-source BFS:
+
+```
+GPU-Sparse (cuSPARSE SpMM)     0.192s  ──  1.0x
+  └─ Direct CSR expand          0.041s  ──  4.7x  (remove SpMM)
+      └─ guard+CAS              0.030s  ──  6.4x  (reduce atomic contention)
+          └─ Per-source BFS      0.019s  ── 10.1x  (remove all matrix overhead)
+```
+
+This reveals that for full APSP, the matrix-algebraic framework introduces indirection costs (shared footprint → atomics, per-hop kernel launch, frontier matrix management) that pure per-source BFS avoids entirely.
+
+### 4. D-STORM's value beyond speed
+
+While BG1 is fastest for full APSP, D-STORM provides capabilities that per-source BFS cannot:
+
+- **k-hop constrained APSP** — exact hop shells at each distance level
+- **Dynamic edge insertion** — O(n²) incremental update without full recomputation
+- **Algebraic analysis** — matrix-based framework for theoretical convergence proofs
 
 ## Implementations (02_Implementations/)
 

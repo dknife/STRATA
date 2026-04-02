@@ -127,28 +127,20 @@ PLC-2000 & PL cluster & 2,000 & 19,926 & 5 & \texttt{powerlaw\_cluster(2000,5,0.
 \section{벤치마킹 결과}
 %======================================================================
 
-\subsection{Facebook 전체 비교 (12 methods)}
+\subsection{Facebook --- GPU 기법 (4종)}
 
 \begin{table}[H]\centering
-\caption{Facebook ($n\!=\!4{,}039$): 전체 12종 순위}
-\label{tab:fb-all}
+\caption{Facebook ($n\!=\!4{,}039$): GPU 4종 순위}
+\label{tab:fb-gpu}
 \small
 \begin{tabular}{@{}rllrrr@{}}
 \toprule
-\textbf{\#} & \textbf{ID} & \textbf{기법} & \textbf{시간 (s)} & \textbf{vs SciPy} & \textbf{vs NX} \\
+\textbf{\#} & \textbf{ID} & \textbf{기법} & \textbf{시간 (s)} & \textbf{vs SciPy} & \textbf{분류} \\
 \midrule
-\rowcolor{newbest!15} 1 & BG1 & GPU-PerSrc-BFS & \textbf{0.016} & 122$\times$ & 880$\times$ \\
-\rowcolor{newbest!10} 2 & BG2 & DAWN-SOVM & 0.019 & 101$\times$ & 741$\times$ \\
-\rowcolor{gpucol!8} 3 & TG2 & D-STORM-CUDA & 0.028 & 68$\times$ & 503$\times$ \\
-4 & TG1 & D-STORM-DAWNiBFS & 0.247 & 7.8$\times$ & 57$\times$ \\
-\rowcolor{cpubest!5} 5 & TC1 & D-STORM-SpMM-Cython & 0.984 & 2.0$\times$ & 14$\times$ \\
-6 & TC2 & D-STORM-NumpyBLAS & 1.697 & 1.1$\times$ & 8$\times$ \\
-7 & TC3 & D-STORM-GraphBLAS & 1.921 & 1.0$\times$ & 7$\times$ \\
-8 & BC2 & SciPy & 1.918 & 1.0$\times$ & 7$\times$ \\
-9 & BC4 & M-AORM & 2.831 & 0.7$\times$ & 5$\times$ \\
-10 & BC5 & GB-bfs & 4.071 & 0.5$\times$ & 3$\times$ \\
-11 & BC3 & I-AORM & 8.693 & 0.2$\times$ & 2$\times$ \\
-12 & BC1 & NetworkX & 14.073 & 0.1$\times$ & 1$\times$ \\
+\rowcolor{newbest!15} 1 & BG1 & GPU-PerSrc-BFS & \textbf{0.016} & 122$\times$ & Baseline \\
+\rowcolor{newbest!10} 2 & BG2 & DAWN-SOVM & 0.019 & 101$\times$ & Baseline \\
+\rowcolor{gpucol!8} 3 & TG2 & D-STORM-CUDA & 0.028 & 68$\times$ & D-STORM \\
+4 & TG1 & D-STORM-DAWNiBFS & 0.247 & 7.8$\times$ & D-STORM \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -157,14 +149,13 @@ PLC-2000 & PL cluster & 2,000 & 19,926 & 5 & \texttt{powerlaw\_cluster(2000,5,0.
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-  xbar, width=0.88\textwidth, height=9.5cm, bar width=7pt,
+  xbar, width=0.88\textwidth, height=5cm, bar width=10pt,
   xlabel={실행 시간 (초)},
-  symbolic y coords={BG1,BG2,TG2,TG1,TC1,TC2,TC3,BC2,BC4,BC5,BC3,BC1},
+  symbolic y coords={BG1,BG2,TG2,TG1},
   ytick=data,
-  yticklabels={GPU-PerSrc-BFS,DAWN-SOVM,D-STORM-CUDA,D-STORM-DAWNiBFS,
-    D-STORM-SpMM-Cython,D-STORM-NumpyBLAS,D-STORM-GraphBLAS,SciPy,M-AORM,GB-bfs,I-AORM,NetworkX},
-  xmin=0, xmax=16,
-  enlarge y limits={abs=6pt},
+  yticklabels={GPU-PerSrc-BFS (BG1),DAWN-SOVM (BG2),D-STORM-CUDA (TG2),D-STORM-DAWNiBFS (TG1)},
+  xmin=0, xmax=0.30,
+  enlarge y limits={abs=10pt},
   nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
   nodes near coords style={font=\scriptsize, anchor=west},
   y tick label style={font=\small},
@@ -173,14 +164,57 @@ PLC-2000 & PL cluster & 2,000 & 19,926 & 5 & \texttt{powerlaw\_cluster(2000,5,0.
   coordinates {(0.016,BG1) (0.019,BG2)};
 \addplot[fill=purple!40, draw=purple!60!black, bar shift=0pt, forget plot]
   coordinates {(0.028,TG2) (0.247,TG1)};
-\addplot[fill=blue!40, draw=blue!60!black, bar shift=0pt, forget plot]
+\end{axis}
+\end{tikzpicture}
+\caption{Facebook APSP --- GPU 기법. BG1/BG2/TG2가 Tier~1, TG1이 Tier~2.}
+\label{fig:fb-gpu}
+\end{figure}
+
+\subsection{Facebook --- CPU 기법 (8종)}
+
+\begin{table}[H]\centering
+\caption{Facebook ($n\!=\!4{,}039$): CPU 8종 순위}
+\label{tab:fb-cpu}
+\small
+\begin{tabular}{@{}rllrrr@{}}
+\toprule
+\textbf{\#} & \textbf{ID} & \textbf{기법} & \textbf{시간 (s)} & \textbf{vs SciPy} & \textbf{분류} \\
+\midrule
+\rowcolor{cpubest!8} 1 & TC1 & D-STORM-SpMM-Cython & \textbf{0.984} & 2.0$\times$ & D-STORM \\
+2 & TC2 & D-STORM-NumpyBLAS & 1.697 & 1.1$\times$ & D-STORM \\
+3 & TC3 & D-STORM-GraphBLAS & 1.921 & 1.0$\times$ & D-STORM \\
+4 & BC2 & SciPy & 1.918 & 1.0$\times$ & Baseline \\
+5 & BC4 & M-AORM & 2.831 & 0.7$\times$ & Baseline \\
+6 & BC5 & GB-bfs & 4.071 & 0.5$\times$ & Baseline \\
+7 & BC3 & I-AORM & 8.693 & 0.2$\times$ & Baseline \\
+8 & BC1 & NetworkX & 14.073 & 0.1$\times$ & Baseline \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xbar, width=0.88\textwidth, height=7cm, bar width=9pt,
+  xlabel={실행 시간 (초)},
+  symbolic y coords={TC1,TC2,TC3,BC2,BC4,BC5,BC3,BC1},
+  ytick=data,
+  yticklabels={D-STORM-SpMM-Cython,D-STORM-NumpyBLAS,D-STORM-GraphBLAS,SciPy,M-AORM,GB-bfs,I-AORM,NetworkX},
+  xmin=0, xmax=16,
+  enlarge y limits={abs=8pt},
+  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
+  nodes near coords style={font=\scriptsize, anchor=west},
+  y tick label style={font=\small},
+]
+\addplot[fill=blue!40, draw=blue!60!black, forget plot]
   coordinates {(0.984,TC1) (1.697,TC2) (1.921,TC3)};
 \addplot[fill=orange!18, draw=orange!50!black, bar shift=0pt, forget plot]
   coordinates {(1.918,BC2) (2.831,BC4) (4.071,BC5) (8.693,BC3) (14.073,BC1)};
 \end{axis}
 \end{tikzpicture}
-\caption{Facebook APSP 12종 비교.}
-\label{fig:fb-bar}
+\caption{Facebook APSP --- CPU 기법. TC1이 CPU 최고 (0.984s), SciPy 대비 2.0배.}
+\label{fig:fb-cpu}
 \end{figure}
 
 \subsection{위상별 비교 --- GPU 기법}
@@ -224,11 +258,11 @@ BC1 & NetworkX & 14.073 & 1.147 & 1.218 & 1.366 & 1.031 & 1.220 \\
 \end{tabular}}
 \end{table}
 
-\subsection{전체 순위 (6개 그래프 총합)}
+\subsection{전체 순위 --- GPU (6개 그래프 총합)}
 
 \begin{table}[H]\centering
-\caption{6개 그래프 총합 실행 시간 순위}
-\label{tab:grand}
+\caption{GPU 4기법: 6개 그래프 총합}
+\label{tab:grand-gpu}
 \small
 \begin{tabular}{@{}rclrr@{}}
 \toprule
@@ -238,14 +272,28 @@ BC1 & NetworkX & 14.073 & 1.147 & 1.218 & 1.366 & 1.031 & 1.220 \\
 \rowcolor{newbest!8} 2 & BG2 & DAWN-SOVM & 0.045 & 0.008 \\
 \rowcolor{gpucol!6} 3 & TG2 & D-STORM-CUDA & 0.068 & 0.011 \\
 4 & TG1 & D-STORM-DAWNiBFS & 0.334 & 0.056 \\
-\rowcolor{cpubest!5} 5 & TC1 & D-STORM-SpMM-Cython & 2.293 & 0.382 \\
-6 & BC2 & SciPy & 3.305 & 0.551 \\
-7 & TC3 & D-STORM-GraphBLAS & 4.429 & 0.738 \\
-8 & TC2 & D-STORM-NumpyBLAS & 6.726 & 1.121 \\
-9 & BC4 & M-AORM & 10.102 & 1.684 \\
-10 & BC5 & GB-bfs & 12.428 & 2.071 \\
-11 & BC3 & I-AORM & 14.885 & 2.481 \\
-12 & BC1 & NetworkX & 20.054 & 3.342 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{전체 순위 --- CPU (6개 그래프 총합)}
+
+\begin{table}[H]\centering
+\caption{CPU 8기법: 6개 그래프 총합}
+\label{tab:grand-cpu}
+\small
+\begin{tabular}{@{}rclrr@{}}
+\toprule
+\textbf{\#} & \textbf{ID} & \textbf{기법} & \textbf{총합 (s)} & \textbf{평균 (s)} \\
+\midrule
+\rowcolor{cpubest!5} 1 & TC1 & D-STORM-SpMM-Cython & \textbf{2.293} & 0.382 \\
+2 & BC2 & SciPy & 3.305 & 0.551 \\
+3 & TC3 & D-STORM-GraphBLAS & 4.429 & 0.738 \\
+4 & TC2 & D-STORM-NumpyBLAS & 6.726 & 1.121 \\
+5 & BC4 & M-AORM & 10.102 & 1.684 \\
+6 & BC5 & GB-bfs & 12.428 & 2.071 \\
+7 & BC3 & I-AORM & 14.885 & 2.481 \\
+8 & BC1 & NetworkX & 20.054 & 3.342 \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>STORM — Sparse Topology-Aware Optimal Reachability Matrix</title>
+<title>D-STORM — Dynamic Sparse Topology-Aware Optimal Reachability Matrix</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header>
-  <h1>STORM</h1>
+  <h1>D-STORM</h1>
   <div class="subtitle">Small World, Small Efforts</div>
-  <div class="subtitle">Sparse Topology-Aware Optimal Reachability Matrix</div>
+  <div class="subtitle">Dynamic Sparse Topology-Aware Optimal Reachability Matrix</div>
   <div class="authors">Young-Min Kang (Tongmyong University) &amp; Sung-Soo Kim (ETRI)</div>
 </header>
 
@@ -19,7 +19,7 @@
   <a href="#overview">Overview</a>
   <a href="#algorithm">Algorithm</a>
   <a href="#results">Results</a>
-  <a href="#gpu">GPU</a>
+  <a href="#contributions">D-STORM</a>
   <a href="#discussion">Discussion</a>
   <a href="#links">Links</a>
   <a href="howto.html">How to Run</a>
@@ -32,41 +32,32 @@
 <section id="overview">
 <h2>Overview</h2>
 
-<p>STORM (<strong>S</strong>parse <strong>T</strong>opology-aware <strong>O</strong>ptimal <strong>R</strong>eachability <strong>M</strong>atrix) is a Cython-accelerated framework for incremental all-pairs shortest path (APSP) computation. It extends the <a href="https://ieeexplore.ieee.org/document/9424548" target="_blank">AORM framework</a> (IEEE Access, 2021) with sparse matrix redesign, a fused C pruning kernel, GPU acceleration via CUDA, and comprehensive benchmarking against GraphBLAS.</p>
+<p>D-STORM (<strong>D</strong>ynamic <strong>S</strong>parse <strong>T</strong>opology-aware <strong>O</strong>ptimal <strong>R</strong>eachability <strong>M</strong>atrix) is a framework for all-pairs shortest path (APSP) computation. It extends the <a href="https://ieeexplore.ieee.org/document/9424548" target="_blank">AORM framework</a> (IEEE Access, 2021) with sparse matrix redesign, Cython fused pruning, CUDA GPU acceleration with a custom guard+CAS kernel, and comprehensive benchmarking across 11 methods and 6 graph topologies.</p>
 
 <div class="card">
 <h3>Key Results (Facebook, n=4,039)</h3>
 <ul>
-  <li><strong>GPU-Dense (cuBLAS):</strong> 0.114s &mdash; <strong>128.8&times;</strong> over NetworkX, <strong>17.9&times;</strong> over SciPy (C)</li>
-  <li><strong>D-STORM-Sparse (Cython):</strong> 1.093s &mdash; <strong>1.87&times;</strong> over SciPy (C), <strong>7.4&times;</strong> over I-AORM</li>
-  <li><strong>Hop-constrained (k=5):</strong> 18.3&times; over NetworkX at 89% accuracy</li>
+  <li><strong>GPU-PerSrc-BFS (BG1):</strong> 0.019s &mdash; <strong>101&times;</strong> over SciPy, <strong>748&times;</strong> over NetworkX</li>
+  <li><strong>D-STORM-CUDA (TG2):</strong> 0.030s &mdash; <strong>64&times;</strong> over SciPy (guard+CAS kernel)</li>
+  <li><strong>D-STORM-SpMM-Cython (TC1):</strong> 1.016s &mdash; <strong>1.9&times;</strong> over SciPy (CPU best)</li>
+  <li>All 11 methods produce <strong>identical</strong> distance matrices (verified element-wise)</li>
 </ul>
 </div>
 
 <div class="card">
-<h3>Why STORM?</h3>
-<p>Real-world networks are overwhelmingly <em>small-world</em>: Facebook's 721 million users are connected by an average distance of just 4.74 hops. Most applications&mdash;traffic prediction, epidemic tracing, influence analysis&mdash;need only local distance information (k=3&ndash;5 hops), not full APSP. STORM's incremental design provides this information faster than any existing method.</p>
+<h3>Why D-STORM?</h3>
+<p>Real-world networks are overwhelmingly <em>small-world</em>: Facebook's 721 million users are connected by an average distance of just 4.74 hops. D-STORM provides the fastest matrix-algebraic APSP on CPU (1.9&times; over SciPy C BFS) and the second-fastest GPU method overall, while uniquely supporting k-hop constrained queries, dynamic edge insertion, and algebraic convergence analysis.</p>
 </div>
-
-<h3>Contributions</h3>
-<ol>
-  <li><strong>Systematic audit:</strong> Seven AORM limitations identified via code-paper comparison.</li>
-  <li><strong>Optimized CPU implementation:</strong> Five structural changes + Cython fused pruning kernel &rarr; <strong>7.4&times;</strong> over I-AORM, <strong>1.87&times;</strong> over SciPy (C) on Facebook.</li>
-  <li><strong>GPU acceleration:</strong> CUDA port via cuBLAS/cuSPARSE &rarr; <strong>10&ndash;16&times;</strong> over CPU D-STORM, scaling with graph size.</li>
-  <li><strong>GraphBLAS baseline:</strong> Same algorithm reimplemented with SuiteSparse:GraphBLAS &rarr; D-STORM's Cython kernel is <strong>1.6&ndash;2.0&times;</strong> faster on small-world graphs.</li>
-  <li><strong>Topology-aware analysis:</strong> Graph diameter governs performance. STORM excels on d&le;8, GPU eliminates the high-diameter weakness.</li>
-  <li><strong>Dynamic support (D-STORM):</strong> 22&ndash;33&times; faster edge addition via incremental distance updates.</li>
-</ol>
 </section>
 
 <!-- ========== Algorithm ========== -->
 <section id="algorithm">
 <h2>Algorithm</h2>
 
-<p>STORM preserves AORM's iterative reachability framework while introducing five structural changes:</p>
+<p>D-STORM preserves AORM's iterative reachability framework while introducing five structural changes:</p>
 
 <table>
-  <tr><th>ID</th><th>AORM</th><th>STORM</th><th>Effect</th></tr>
+  <tr><th>ID</th><th>AORM</th><th>D-STORM</th><th>Effect</th></tr>
   <tr><td>C1</td><td>Dense matmul O(n&sup3;)</td><td>Sparse SpMM O(nnz&middot;c&#772;)</td><td>Sparse graph acceleration</td></tr>
   <tr><td>C2</td><td>Fixed O(n&sup2;)/iter</td><td>nnz-proportional cost</td><td>Progressive sparsity</td></tr>
   <tr><td>C3</td><td>Pre-prune check O(n&sup2;)</td><td>Post-prune nnz=0, O(1)</td><td>Correct + fast</td></tr>
@@ -74,7 +65,7 @@
   <tr><td>C5</td><td>Sparse F add O(n&sup2;)</td><td>Dense bool F, O(1)/entry</td><td>Footprint acceleration</td></tr>
 </table>
 
-<p>The Cython C-extension (<code>_storm_core.pyx</code>) fuses pruning, convergence checking, and footprint update into a single C loop. On Windows, it is built with MSVC 14.44 (VS 2022 Build Tools) via a manual <code>cl</code>+<code>link</code> pipeline.</p>
+<p>The Cython C-extension (<code>_storm_core.pyx</code>) fuses pruning, convergence checking, and footprint update into a single C loop.</p>
 
 <h3>D-STORM: Dynamic Edge Addition</h3>
 <p>When edge (u,v) is added: D<sub>i,j</sub><sup>new</sup> = min(D<sub>i,j</sub><sup>old</sup>, D<sub>i,u</sub> + 1 + D<sub>v,j</sub>). Only 0.008% of pairs are affected per update, yielding 22&ndash;33&times; speedup over full recomputation.</p>
@@ -84,98 +75,135 @@
 <section id="results">
 <h2>Experimental Results</h2>
 
-<p><em>Environment: Windows 11 Pro, Python 3.14.3, NVIDIA RTX 5080 (16GB), CUDA 12.9, CuPy 14.0.1, SuiteSparse:GraphBLAS 10.3.1, Cython 3.2.4. All timings are best of 3 runs.</em></p>
+<p><em>Environment: Windows 11 Pro, Python 3.14.3, NVIDIA RTX 5080 (16GB), CUDA 12.9, CuPy 14.0.1, SuiteSparse:GraphBLAS 10.3.1, Cython 3.2.4. All timings are best of 3 runs. GPU methods include 1 warmup run.</em></p>
 
-<h3>Facebook Social Network (n=4,039) &mdash; 10 Methods</h3>
+<h3>Facebook Social Network (n=4,039) &mdash; GPU Methods</h3>
 <table>
-  <tr><th>#</th><th>Method</th><th>Family</th><th>Time (s)</th><th>vs SciPy</th><th>vs NX</th></tr>
-  <tr style="background:#f0e6f6"><td>1</td><td><strong>GPU-Dense</strong></td><td>D-STORM GPU</td><td><strong>0.114</strong></td><td class="highlight">17.9&times;</td><td class="highlight">128.8&times;</td></tr>
-  <tr style="background:#f0e6f6"><td>2</td><td>GPU-Sparse</td><td>D-STORM GPU</td><td>0.175</td><td>11.7&times;</td><td>83.9&times;</td></tr>
-  <tr style="background:#e8f0fe"><td>3</td><td><strong>D-STORM-Sparse</strong></td><td>D-STORM CPU</td><td>1.093</td><td class="highlight">1.87&times;</td><td>13.4&times;</td></tr>
-  <tr><td>4</td><td>D-STORM-Dense</td><td>D-STORM CPU</td><td>1.816</td><td>1.13&times;</td><td>8.1&times;</td></tr>
-  <tr><td>5</td><td>GB-frontier</td><td>GraphBLAS</td><td>1.997</td><td>1.02&times;</td><td>7.3&times;</td></tr>
-  <tr><td>6</td><td>SciPy</td><td>Reference</td><td>2.045</td><td>1.0&times;</td><td>7.2&times;</td></tr>
-  <tr><td>7</td><td>M-AORM</td><td>AORM</td><td>3.475</td><td>0.59&times;</td><td>4.2&times;</td></tr>
-  <tr><td>8</td><td>GB-bfs</td><td>GraphBLAS</td><td>4.563</td><td>0.45&times;</td><td>3.2&times;</td></tr>
-  <tr><td>9</td><td>I-AORM</td><td>AORM</td><td>8.070</td><td>0.25&times;</td><td>1.8&times;</td></tr>
-  <tr><td>10</td><td>NetworkX</td><td>Reference</td><td>14.683</td><td>0.14&times;</td><td>1.0&times;</td></tr>
+  <tr><th>#</th><th>Method</th><th>ID</th><th>Time (s)</th><th>vs SciPy</th><th>Category</th></tr>
+  <tr style="background:#fef9e7"><td>1</td><td><strong>GPU-PerSrc-BFS</strong></td><td>BG1</td><td><strong>0.019</strong></td><td class="highlight">101&times;</td><td>Baseline</td></tr>
+  <tr style="background:#fef9e7"><td>2</td><td><strong>D-STORM-CUDA</strong></td><td>TG2</td><td>0.030</td><td class="highlight">64&times;</td><td>D-STORM</td></tr>
+  <tr style="background:#f0e6f6"><td>3</td><td>D-STORM-cuBLAS</td><td>TG1</td><td>0.155</td><td>12&times;</td><td>D-STORM</td></tr>
 </table>
 
-<h3>BA Graph Scalability</h3>
+<h3>Facebook Social Network (n=4,039) &mdash; CPU Methods</h3>
 <table>
-  <tr><th>n</th><th>GPU-Dense</th><th>GPU-Sparse</th><th>D-STORM-Sp</th><th>SciPy</th><th>I-AORM</th><th>NetworkX</th></tr>
-  <tr><td>500</td><td><strong>0.001</strong></td><td>0.009</td><td>0.014</td><td>0.017</td><td>0.021</td><td>0.049</td></tr>
-  <tr><td>1,000</td><td><strong>0.006</strong></td><td>0.014</td><td>0.059</td><td>0.070</td><td>0.098</td><td>0.214</td></tr>
-  <tr><td>2,000</td><td>0.030</td><td><strong>0.026</strong></td><td>0.247</td><td>0.299</td><td>0.420</td><td>0.957</td></tr>
-  <tr><td>3,000</td><td>0.068</td><td><strong>0.040</strong></td><td>0.566</td><td>0.719</td><td>1.021</td><td>2.353</td></tr>
-  <tr><td>5,000</td><td>0.205</td><td><strong>0.099</strong></td><td>1.622</td><td>2.020</td><td>3.063</td><td>6.987</td></tr>
+  <tr><th>#</th><th>Method</th><th>ID</th><th>Time (s)</th><th>vs SciPy</th><th>Category</th></tr>
+  <tr style="background:#e8f0fe"><td>1</td><td><strong>D-STORM-SpMM-Cython</strong></td><td>TC1</td><td><strong>1.016</strong></td><td class="highlight">1.9&times;</td><td>D-STORM</td></tr>
+  <tr><td>2</td><td>D-STORM-NumpyBLAS</td><td>TC2</td><td>1.723</td><td>1.1&times;</td><td>D-STORM</td></tr>
+  <tr><td>3</td><td>D-STORM-GraphBLAS</td><td>TC3</td><td>1.897</td><td>1.0&times;</td><td>D-STORM</td></tr>
+  <tr><td>4</td><td>SciPy (C BFS)</td><td>BC2</td><td>1.921</td><td>1.0&times;</td><td>Baseline</td></tr>
+  <tr><td>5</td><td>M-AORM</td><td>BC4</td><td>2.868</td><td>0.7&times;</td><td>Baseline</td></tr>
+  <tr><td>6</td><td>GB-bfs</td><td>BC5</td><td>4.065</td><td>0.5&times;</td><td>Baseline</td></tr>
+  <tr><td>7</td><td>I-AORM</td><td>BC3</td><td>7.489</td><td>0.3&times;</td><td>Baseline</td></tr>
+  <tr><td>8</td><td>NetworkX</td><td>BC1</td><td>14.213</td><td>0.1&times;</td><td>Baseline</td></tr>
 </table>
-<p>GPU speedup scales with graph size: 14&times; at n=500 &rarr; <strong>16.4&times;</strong> at n=5,000 (vs D-STORM-Sparse). CPU D-STORM-Sparse is faster than SciPy at all scales.</p>
 
-<h3>Topology Effect &mdash; 10 Methods &times; 5 Topologies</h3>
-<table>
-  <tr><th>Method</th><th>BA (d=5)</th><th>ER (d=6)</th><th>WS (d=8)</th><th>Grid (d=88)</th><th>PLC (d=5)</th></tr>
-  <tr style="background:#f0e6f6"><td>GPU-Dense</td><td>0.030</td><td>0.031</td><td>0.030</td><td><strong>0.094</strong></td><td>0.030</td></tr>
-  <tr style="background:#f0e6f6"><td>GPU-Sparse</td><td><strong>0.026</strong></td><td><strong>0.028</strong></td><td><strong>0.029</strong></td><td>0.240</td><td><strong>0.023</strong></td></tr>
-  <tr style="background:#e8f0fe"><td>D-STORM-Sp</td><td>0.247</td><td>0.278</td><td>0.266</td><td>0.805</td><td>0.311</td></tr>
-  <tr><td>D-STORM-Dn</td><td>0.285</td><td>0.330</td><td>0.427</td><td>4.096</td><td>0.318</td></tr>
-  <tr><td>SciPy</td><td>0.299</td><td>0.306</td><td>0.277</td><td>0.151</td><td>0.315</td></tr>
-  <tr><td>I-AORM</td><td>0.420</td><td>0.480</td><td>0.576</td><td>5.626</td><td>0.458</td></tr>
-  <tr><td>M-AORM</td><td>0.429</td><td>0.507</td><td>0.667</td><td>6.814</td><td>0.467</td></tr>
-  <tr><td>GB-frontier</td><td>0.474</td><td>0.480</td><td>0.521</td><td>0.609</td><td>0.495</td></tr>
-  <tr><td>GB-bfs</td><td>1.187</td><td>1.202</td><td>1.307</td><td>3.504</td><td>1.221</td></tr>
-  <tr><td>NetworkX</td><td>0.957</td><td>1.152</td><td>1.020</td><td>0.868</td><td>1.189</td></tr>
-</table>
-<p>D-STORM-Sparse is CPU-fastest on all small-world topologies (d&le;8). On Grid (d=88), GPU-Dense (0.094s) beats SciPy (0.151s). D-STORM-Sparse (0.805s) is slower than SciPy on Grid but 1.6&ndash;2.0&times; faster than GraphBLAS-frontier on small-world graphs.</p>
-
-<h3>Hop-Constrained APSP &mdash; STORM's Strongest Capability</h3>
-<table>
-  <tr><th>k</th><th>STORM</th><th>I-AORM</th><th>NetworkX</th><th>vs I-AORM</th><th>vs NX</th></tr>
-  <tr><td>2</td><td>0.080s</td><td>0.545s</td><td>0.764s</td><td class="highlight">6.8&times;</td><td>9.6&times;</td></tr>
-  <tr><td>5</td><td>0.959s</td><td>1.858s</td><td>17.520s</td><td>1.9&times;</td><td class="highlight">18.3&times;</td></tr>
-  <tr><td>8</td><td>1.178s</td><td>3.206s</td><td>19.162s</td><td>2.7&times;</td><td>16.3&times;</td></tr>
-</table>
-<p>At k=5, 89% of all shortest paths are already found &mdash; sufficient for traffic congestion prediction (k=3&ndash;5) and epidemic tracing (k=2&ndash;4).</p>
-
-<h3>Grid Approximate APSP</h3>
-<div class="fig">
-  <img src="../03_a_experimental_result/grid_comparison.png" alt="Grid APSP approximation at k=2,4,8,16,32 vs exact">
-  <div class="caption">Grid 20&times;20: STORM at k=2,4,8,16,32 vs SciPy exact (d=38). At k=16, STORM captures 69% of pairs at 0.65&times; SciPy's cost.</div>
+<h3>Performance Tiers</h3>
+<div class="card">
+<pre style="background:transparent;color:var(--text);padding:0.5rem;margin:0;font-size:0.95rem">Tier 1  BG1/TG2  (0.004&ndash;0.03s)  GPU per-source BFS / CUDA direct expand
+Tier 2  TG1      (0.03&ndash;0.16s)   GPU cuBLAS dense matmul
+Tier 3  TC1/BC2  (0.13&ndash;1.92s)   CPU SpMM+Cython / C BFS
+Tier 4  TC2/TC3  (0.30&ndash;5.28s)   CPU dense BLAS / GraphBLAS
+Tier 5  BC1&ndash;BC5  (0.40&ndash;14.2s)   Python BFS / edge-wise / GraphBLAS BFS</pre>
 </div>
 
-<h3>D-STORM Dynamic Updates</h3>
+<h3>Topology Comparison &mdash; 11 Methods &times; 6 Graphs</h3>
+
+<h4>GPU Methods</h4>
 <table>
-  <tr><th>n</th><th>ADD (ms)</th><th>Full (ms)</th><th>Speedup</th></tr>
-  <tr><td>500</td><td>0.80</td><td>17.2</td><td class="highlight">22&times;</td></tr>
-  <tr><td>1,000</td><td>2.32</td><td>68.9</td><td class="highlight">30&times;</td></tr>
-  <tr><td>2,000</td><td>8.52</td><td>283.7</td><td class="highlight">33&times;</td></tr>
+  <tr><th>Method</th><th>Facebook</th><th>BA (d=5)</th><th>WS (d=8)</th><th>ER (d=6)</th><th>Grid (d=88)</th><th>PLC (d=5)</th></tr>
+  <tr style="background:#fef9e7"><td><strong>BG1</strong> GPU-PerSrc-BFS</td><td><strong>0.019</strong></td><td>0.006</td><td>0.006</td><td>0.006</td><td><strong>0.007</strong></td><td>0.006</td></tr>
+  <tr style="background:#fef9e7"><td><strong>TG2</strong> D-STORM-CUDA</td><td>0.030</td><td><strong>0.005</strong></td><td><strong>0.004</strong></td><td><strong>0.005</strong></td><td>0.013</td><td><strong>0.005</strong></td></tr>
+  <tr style="background:#f0e6f6"><td>TG1 D-STORM-cuBLAS</td><td>0.155</td><td>0.029</td><td>0.030</td><td>0.030</td><td>0.097</td><td>0.029</td></tr>
+</table>
+<p>TG2 wins on 4/6 graphs (small-world, n&approx;2,000). BG1 wins on Facebook (larger n) and Grid (high diameter).</p>
+
+<h4>CPU Methods</h4>
+<table>
+  <tr><th>Method</th><th>Facebook</th><th>BA (d=5)</th><th>WS (d=8)</th><th>ER (d=6)</th><th>Grid (d=88)</th><th>PLC (d=5)</th></tr>
+  <tr style="background:#e8f0fe"><td><strong>TC1</strong> D-STORM-SpMM-Cython</td><td><strong>1.016</strong></td><td><strong>0.284</strong></td><td><strong>0.291</strong></td><td><strong>0.316</strong></td><td><strong>0.135</strong></td><td><strong>0.281</strong></td></tr>
+  <tr><td>TC2 D-STORM-NumpyBLAS</td><td>1.723</td><td>0.306</td><td>0.446</td><td>0.359</td><td>3.532</td><td>0.304</td></tr>
+  <tr><td>TC3 D-STORM-GraphBLAS</td><td>1.897</td><td>0.464</td><td>0.483</td><td>0.484</td><td>0.589</td><td>0.479</td></tr>
+  <tr><td>BC2 SciPy</td><td>1.921</td><td>0.312</td><td>0.291</td><td>0.314</td><td>0.167</td><td>0.313</td></tr>
+  <tr><td>BC4 M-AORM</td><td>2.868</td><td>0.430</td><td>0.621</td><td>0.501</td><td>5.276</td><td>0.412</td></tr>
+  <tr><td>BC5 GB-bfs</td><td>4.065</td><td>1.191</td><td>1.238</td><td>1.248</td><td>3.412</td><td>1.133</td></tr>
+  <tr><td>BC3 I-AORM</td><td>7.489</td><td>0.407</td><td>0.520</td><td>0.449</td><td>4.397</td><td>0.397</td></tr>
+  <tr><td>BC1 NetworkX</td><td>14.213</td><td>1.188</td><td>1.218</td><td>1.366</td><td>1.089</td><td>1.157</td></tr>
+</table>
+<p>TC1 (D-STORM-SpMM-Cython) is <strong>CPU-fastest on all 6 graphs</strong>, including Grid (d=88) where it beats SciPy by 1.2&times;.</p>
+
+<h3>Grand Summary (6 Graphs Total)</h3>
+<table>
+  <tr><th>#</th><th>ID</th><th>Method</th><th>Total (s)</th><th>Mean (s)</th></tr>
+  <tr style="background:#fef9e7"><td>1</td><td>BG1</td><td><strong>GPU-PerSrc-BFS</strong></td><td><strong>0.051</strong></td><td>0.008</td></tr>
+  <tr style="background:#fef9e7"><td>2</td><td>TG2</td><td><strong>D-STORM-CUDA</strong></td><td>0.062</td><td>0.010</td></tr>
+  <tr style="background:#f0e6f6"><td>3</td><td>TG1</td><td>D-STORM-cuBLAS</td><td>0.369</td><td>0.062</td></tr>
+  <tr style="background:#e8f0fe"><td>4</td><td>TC1</td><td><strong>D-STORM-SpMM-Cython</strong></td><td>2.323</td><td>0.387</td></tr>
+  <tr><td>5</td><td>BC2</td><td>SciPy</td><td>3.316</td><td>0.553</td></tr>
+  <tr><td>6</td><td>TC3</td><td>D-STORM-GraphBLAS</td><td>4.394</td><td>0.732</td></tr>
+  <tr><td>7</td><td>TC2</td><td>D-STORM-NumpyBLAS</td><td>6.670</td><td>1.112</td></tr>
+  <tr><td>8</td><td>BC4</td><td>M-AORM</td><td>10.107</td><td>1.685</td></tr>
+  <tr><td>9</td><td>BC5</td><td>GB-bfs</td><td>12.288</td><td>2.048</td></tr>
+  <tr><td>10</td><td>BC3</td><td>I-AORM</td><td>13.660</td><td>2.277</td></tr>
+  <tr><td>11</td><td>BC1</td><td>NetworkX</td><td>20.231</td><td>3.372</td></tr>
 </table>
 </section>
 
-<!-- ========== GPU ========== -->
-<section id="gpu">
-<h2>GPU Acceleration</h2>
+<!-- ========== D-STORM Contributions ========== -->
+<section id="contributions">
+<h2>D-STORM Contributions</h2>
 
 <div class="card">
-<h3>Two GPU Strategies</h3>
+<h3>1. CPU: Fastest Matrix-Algebraic APSP</h3>
+<p>D-STORM-SpMM-Cython (TC1) is the <strong>fastest CPU method across all 6 graph topologies</strong>, outperforming SciPy's native C BFS by up to 1.9&times;. The key is Cython fused pruning &mdash; collapsing three sparse operations (booleanize &rarr; prune &rarr; footprint update) into a single C pass over COO entries.</p>
 <table>
-  <tr><th>Strategy</th><th>Kernel</th><th>Best for</th></tr>
-  <tr><td><strong>GPU-Dense</strong></td><td>cuBLAS dense matmul</td><td>n&lt;2,000 or high diameter</td></tr>
-  <tr><td><strong>GPU-Sparse</strong></td><td>cuSPARSE SpMM</td><td>n&ge;2,000, small-world</td></tr>
+  <tr><th>Graph</th><th>TC1 (s)</th><th>SciPy (s)</th><th>Speedup</th></tr>
+  <tr><td>Facebook (n=4,039)</td><td><strong>1.016</strong></td><td>1.921</td><td class="highlight">1.9&times;</td></tr>
+  <tr><td>BA-2000</td><td><strong>0.284</strong></td><td>0.312</td><td>1.1&times;</td></tr>
+  <tr><td>WS-2000</td><td><strong>0.291</strong></td><td>0.291</td><td>1.0&times;</td></tr>
+  <tr><td>Grid-45&times;45 (d=88)</td><td><strong>0.135</strong></td><td>0.167</td><td>1.2&times;</td></tr>
 </table>
-<p>GPU speedup scales with graph size: <strong>14&times;</strong> at n=500 &rarr; <strong>16.4&times;</strong> at n=5,000. On Grid (d=88), GPU-Dense (0.094s) is the only method under 0.1s &mdash; <strong>eliminating D-STORM's diameter weakness</strong>.</p>
 </div>
 
 <div class="card">
-<h3>GraphBLAS Comparison</h3>
-<p>We reimplemented D-STORM's frontier algorithm using SuiteSparse:GraphBLAS (<code>GrB_mxm</code> with LOR_LAND semiring + complement mask). Both implementations are Python-orchestrated, making the comparison a fair kernel-level benchmark:</p>
+<h3>2. GPU: SpMM Elimination via Direct CSR Expansion</h3>
+<p>D-STORM-CUDA (TG2) replaces cuSPARSE SpMM with a custom CUDA kernel that directly traverses CSR neighbors, eliminating three SpMM bottlenecks:</p>
+<ol>
+  <li><strong>Redundant products</strong> &mdash; SpMM computes all matrix products including already-visited pairs</li>
+  <li><strong>Intermediate matrices</strong> &mdash; SpMM output requires COO/CSR conversion overhead</li>
+  <li><strong>Separate prune step</strong> &mdash; footprint check is fused into expansion (1-pass)</li>
+</ol>
+<p>The footprint check uses a <strong>guard+CAS</strong> pattern: non-atomic read guard skips already-visited cells, then <code>atomicCAS</code> ensures race-free 0&rarr;1 transitions. This is 38% faster than pure <code>atomicExch</code> on high-degree graphs while guaranteeing correctness.</p>
+<pre><code>if (F[idx] == 0) {                      // non-atomic guard
+    if (atomicCAS(&F[idx], 0, 1) == 0) { // atomic CAS
+        int pos = atomicAdd(out_count, 1);
+        out_row[pos] = i;
+        out_col[pos] = k;
+    }
+}</code></pre>
+</div>
+
+<div class="card">
+<h3>3. Structural Insight: D-STORM Optimizes Toward Per-Source BFS</h3>
+<p>Progressive removal of D-STORM's matrix-algebraic overhead converges to per-source BFS:</p>
 <table>
-  <tr><th>Dataset</th><th>D-STORM-Sparse</th><th>GB-frontier</th><th>Ratio</th></tr>
-  <tr><td>BA-2000</td><td><strong>0.247s</strong></td><td>0.474s</td><td class="highlight">1.9&times;</td></tr>
-  <tr><td>Facebook</td><td><strong>1.093s</strong></td><td>1.997s</td><td class="highlight">1.8&times;</td></tr>
-  <tr><td>Grid</td><td>0.805s</td><td><strong>0.609s</strong></td><td>0.76&times;</td></tr>
+  <tr><th>Step</th><th>Change</th><th>Time (s)</th><th>Improvement</th></tr>
+  <tr><td>GPU-Sparse</td><td>cuSPARSE SpMM + sparse prune</td><td>0.192</td><td>1.0&times;</td></tr>
+  <tr><td>DirectExpand</td><td>SpMM &rarr; CSR direct expand</td><td>0.041</td><td>4.7&times;</td></tr>
+  <tr><td>+ guard+CAS</td><td>atomicExch &rarr; guard+CAS</td><td>0.030</td><td>6.4&times;</td></tr>
+  <tr><td>Per-source BFS</td><td>Remove all matrix overhead</td><td><strong>0.019</strong></td><td><strong>10.1&times;</strong></td></tr>
 </table>
-<p>D-STORM's Cython fused pruning is 1.6&ndash;2.0&times; faster than GraphBLAS on small-world graphs, but GraphBLAS has better per-iteration efficiency on high-diameter graphs.</p>
+<p>This reveals that for full APSP, the matrix-algebraic framework introduces indirection costs (shared footprint &rarr; atomics, per-hop kernel launch) that pure per-source BFS avoids entirely.</p>
+</div>
+
+<div class="card">
+<h3>4. D-STORM's Value Beyond Speed</h3>
+<p>While BG1 is fastest for full APSP, D-STORM provides capabilities that per-source BFS cannot:</p>
+<ul>
+  <li><strong>k-hop constrained APSP</strong> &mdash; exact hop shells at each distance level</li>
+  <li><strong>Dynamic edge insertion</strong> &mdash; O(n&sup2;) incremental update, 22&ndash;33&times; faster than full recomputation</li>
+  <li><strong>Algebraic analysis</strong> &mdash; matrix-based framework for theoretical convergence proofs</li>
+</ul>
 </div>
 </section>
 
@@ -184,26 +212,29 @@
 <h2>Discussion</h2>
 
 <div class="card">
-<h3>Performance Hierarchy (Small-World Graphs)</h3>
-<p><strong>GPU</strong> (0.02&ndash;0.2s) &Gt; <strong>D-STORM CPU</strong> (0.2&ndash;1.1s) &gt; <strong>SciPy</strong> (0.3&ndash;2.0s) &gt; <strong>AORM / GB-frontier</strong> (0.4&ndash;3.5s) &gt; <strong>NetworkX / GB-bfs</strong> (1&ndash;15s)</p>
-</div>
-
-<div class="card">
-<h3>When SciPy Wins &mdash; and Why GPU Solves It</h3>
-<p>SciPy outperforms CPU D-STORM for full APSP on Grid (d=88). But GPU-Dense (0.094s) beats SciPy (0.151s) even on Grid. With GPU available, D-STORM has no topology weakness.</p>
-<p>Even without GPU: (1) small-world networks dominate practice; (2) hop-constrained STORM is faster for k&le;16 even on Grid; (3) SciPy cannot provide incremental queries, intermediate results, or dynamic updates.</p>
-</div>
-
-<div class="card">
 <h3>Algorithm Selection Guide</h3>
 <table>
   <tr><th>Scenario</th><th>Best (GPU)</th><th>Best (CPU only)</th></tr>
-  <tr><td>Small-world APSP</td><td>GPU-Sparse</td><td><strong>D-STORM-Sparse</strong></td></tr>
-  <tr><td>High diameter APSP</td><td>GPU-Dense</td><td>SciPy</td></tr>
-  <tr><td>k-hop query</td><td>GPU-Sparse</td><td><strong>D-STORM-Sparse</strong></td></tr>
-  <tr><td>Edge addition</td><td colspan="2"><strong>D-STORM</strong> (22&ndash;33&times; vs recompute)</td></tr>
-  <tr><td>Directed + disconnected</td><td colspan="2"><strong>D-STORM</strong> (unique support)</td></tr>
+  <tr><td>Small-world APSP</td><td>TG2 D-STORM-CUDA</td><td><strong>TC1 D-STORM-SpMM-Cython</strong></td></tr>
+  <tr><td>Large-scale APSP (n &gt; 4,000)</td><td><strong>BG1 GPU-PerSrc-BFS</strong></td><td>BC2 SciPy</td></tr>
+  <tr><td>High diameter APSP (d &gt; 20)</td><td><strong>BG1 GPU-PerSrc-BFS</strong></td><td>TC1 / BC2</td></tr>
+  <tr><td>k-hop query</td><td>TG2</td><td><strong>TC1 D-STORM</strong></td></tr>
+  <tr><td>Dynamic edge addition</td><td colspan="2"><strong>D-STORM</strong> (22&ndash;33&times; vs recompute)</td></tr>
 </table>
+</div>
+
+<div class="card">
+<h3>BG1 vs TG2: When Does Each Win?</h3>
+<table>
+  <tr><th>Graph</th><th>d</th><th>BG1 (s)</th><th>TG2 (s)</th><th>Winner</th></tr>
+  <tr><td>Facebook</td><td>8</td><td><strong>0.019</strong></td><td>0.030</td><td>BG1 (1.6&times;)</td></tr>
+  <tr><td>BA-2000</td><td>5</td><td>0.006</td><td><strong>0.005</strong></td><td>TG2 (1.2&times;)</td></tr>
+  <tr><td>WS-2000</td><td>8</td><td>0.006</td><td><strong>0.004</strong></td><td>TG2 (1.3&times;)</td></tr>
+  <tr><td>ER-2000</td><td>6</td><td>0.006</td><td><strong>0.005</strong></td><td>TG2 (1.3&times;)</td></tr>
+  <tr><td>Grid</td><td>88</td><td><strong>0.007</strong></td><td>0.013</td><td>BG1 (1.9&times;)</td></tr>
+  <tr><td>PLC-2000</td><td>5</td><td>0.006</td><td><strong>0.005</strong></td><td>TG2 (1.3&times;)</td></tr>
+</table>
+<p><strong>TG2</strong> wins on small-world graphs (n&approx;2,000) by 18&ndash;34%. <strong>BG1</strong> wins on larger graphs and high-diameter topologies where per-hop kernel launch overhead accumulates.</p>
 </div>
 </section>
 
@@ -217,25 +248,15 @@
     <div class="label">AORM Paper</div>
     <div class="desc">IEEE Access (Open Access)</div>
   </a>
-  <a href="https://github.com/dknife/STORM/tree/main/02_STORM_Implement" target="_blank" class="link-card">
+  <a href="https://github.com/dknife/STORM/tree/main/02_Implementations" target="_blank" class="link-card">
     <div class="icon">&#128187;</div>
-    <div class="label">CPU Code</div>
-    <div class="desc">D-STORM + Cython</div>
+    <div class="label">Implementations</div>
+    <div class="desc">11 APSP Methods</div>
   </a>
-  <a href="https://github.com/dknife/STORM/tree/main/02_STORM_GPU_Implement" target="_blank" class="link-card">
-    <div class="icon">&#9889;</div>
-    <div class="label">GPU Code</div>
-    <div class="desc">CUDA (cuBLAS/cuSPARSE)</div>
-  </a>
-  <a href="https://github.com/dknife/STORM/tree/main/03_Baseline_GraphBLAS" target="_blank" class="link-card">
-    <div class="icon">&#128200;</div>
-    <div class="label">GraphBLAS</div>
-    <div class="desc">Baseline Implementation</div>
-  </a>
-  <a href="https://github.com/dknife/STORM/tree/main/03_experiment_result" target="_blank" class="link-card">
+  <a href="https://github.com/dknife/STORM/tree/main/03_Experiments" target="_blank" class="link-card">
     <div class="icon">&#128202;</div>
     <div class="label">Experiments</div>
-    <div class="desc">10 Methods &times; 10 Datasets</div>
+    <div class="desc">11 Methods &times; 6 Graphs</div>
   </a>
   <a href="howto.html" class="link-card">
     <div class="icon">&#128640;</div>
@@ -248,7 +269,7 @@
 </div>
 
 <footer>
-  <p>STORM Project &copy; 2026 | Young-Min Kang (Tongmyong University) &amp; Sung-Soo Kim (ETRI)</p>
+  <p>D-STORM Project &copy; 2026 | Young-Min Kang (Tongmyong University) &amp; Sung-Soo Kim (ETRI)</p>
   <p><a href="https://github.com/dknife/STORM">GitHub Repository</a></p>
 </footer>
 

@@ -3,118 +3,134 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>STORM — How to Run</title>
+<title>D-STORM — How to Run</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header>
-  <h1>How to Run STORM</h1>
-  <div class="subtitle">Installation, Compilation, and Experiment Guide</div>
+  <h1>How to Run D-STORM</h1>
+  <div class="subtitle">Installation and Benchmark Guide</div>
 </header>
 
 <nav>
-  <a href="index.html">← Home</a>
+  <a href="index.html">&larr; Home</a>
   <a href="#install">Installation</a>
-  <a href="#cython">Cython Build</a>
-  <a href="#usage">Usage</a>
-  <a href="#experiments">Experiments</a>
+  <a href="#benchmark">Benchmark</a>
+  <a href="#api">Python API</a>
+  <a href="#formats">Graph Formats</a>
 </nav>
 
 <div class="container">
 
-<a href="index.html" class="back-link">← Back to Home</a>
+<a href="index.html" class="back-link">&larr; Back to Home</a>
 
 <section id="install">
 <h2>1. Installation</h2>
 <h3>Clone the Repository</h3>
 <pre><code>git clone https://github.com/dknife/STORM.git
-cd STORM/02_STORM_Implement</code></pre>
+cd STORM</code></pre>
 
 <h3>Install Dependencies</h3>
-<pre><code>pip install -r requirements.txt</code></pre>
-<p>Required packages: <code>numpy</code>, <code>scipy</code>, <code>networkx</code>, <code>tqdm</code></p>
+<pre><code>pip install numpy scipy networkx tqdm</code></pre>
 
-<h3>Install Cython (for C acceleration)</h3>
-<pre><code>pip install cython setuptools</code></pre>
+<h3>GPU Methods (optional)</h3>
+<pre><code>pip install cupy-cuda12x</code></pre>
+<p>If CuPy cannot find CUDA, install the runtime packages:</p>
+<pre><code>pip install nvidia-cuda-runtime-cu12 nvidia-cuda-nvrtc-cu12 nvidia-cublas-cu12 nvidia-cusparse-cu12 nvidia-nvjitlink-cu12</code></pre>
+<p>The <code>common/cuda_env.py</code> module automatically detects <code>CUDA_PATH</code> from pip-installed nvidia packages.</p>
+
+<h3>GraphBLAS Methods (optional)</h3>
+<pre><code>pip install suitesparse-graphblas</code></pre>
 </section>
 
-<section id="cython">
-<h2>2. Compile Cython Extension</h2>
-<p>The Cython C-extension provides 1.7–5.5× additional speedup by fusing pruning operations into a single C loop.</p>
-<pre><code>python setup.py build_ext --inplace</code></pre>
-<p>This compiles <code>storm/_storm_core.pyx</code> → <code>storm/_storm_core.cpython-*.so</code> with <code>-O3 -march=native</code>.</p>
-<p>If Cython is not available, STORM falls back to pure Python automatically.</p>
+<section id="benchmark">
+<h2>2. Running Benchmarks</h2>
+
+<h3>Full Benchmark (11 methods &times; 6 graphs)</h3>
+<pre><code>cd 02_Implementations
+python run_full_benchmark.py</code></pre>
+<p>This benchmarks 10 methods (BC1&ndash;BC5, TC1&ndash;TC2, BG1, TG1&ndash;TG2) across 6 graph topologies. Results are saved to <code>full_benchmark_results.json</code>.</p>
+
+<h3>TC3 (GraphBLAS) Standalone</h3>
+<p>TC3 must run in a separate process to avoid <code>GrB_init</code> conflict with BC5:</p>
+<pre><code>python run_tc3_standalone.py</code></pre>
+<p>Results are saved to <code>tc3_benchmark_results.json</code>.</p>
+
+<h3>Benchmark Graphs</h3>
+<table>
+  <tr><th>Graph</th><th>n</th><th>m</th><th>d</th><th>Source</th></tr>
+  <tr><td>Facebook</td><td>4,039</td><td>176,468</td><td>8</td><td><code>04_Datasets/real-world/</code></td></tr>
+  <tr><td>BA-2000</td><td>2,000</td><td>19,950</td><td>5</td><td>Generated (seed=42)</td></tr>
+  <tr><td>WS-2000</td><td>2,000</td><td>12,000</td><td>8</td><td>Generated (seed=42)</td></tr>
+  <tr><td>ER-2000</td><td>2,000</td><td>19,882</td><td>6</td><td>Generated (seed=42)</td></tr>
+  <tr><td>Grid-45&times;45</td><td>2,025</td><td>7,920</td><td>88</td><td>Generated</td></tr>
+  <tr><td>PLC-2000</td><td>2,000</td><td>19,926</td><td>5</td><td>Generated (seed=42)</td></tr>
+</table>
+
+<h3>Benchmark Protocol</h3>
+<ul>
+  <li><strong>Runs:</strong> 3 runs per method, minimum time reported</li>
+  <li><strong>GPU warmup:</strong> 1 warmup run before measurement</li>
+  <li><strong>Correctness:</strong> All distance matrices compared element-wise (int32)</li>
+</ul>
 </section>
 
-<section id="usage">
-<h2>3. Usage</h2>
+<section id="api">
+<h2>3. Python API</h2>
 
-<h3>Basic APSP</h3>
-<pre><code># Sparse STORM APSP on a real-world edge-list
-python main.py -m storm -i path/to/graph.txt -r
+<p>Each method in <code>02_Implementations/&lt;ID&gt;/apsp.py</code> exposes the same interface:</p>
 
-# With hop constraint (k=5)
-python main.py -m storm -i path/to/graph.txt -r -k 5
+<pre><code>def run_apsp(A_csr, k=-1, verbose=True):
+    """
+    Args:
+        A_csr: Adjacency matrix (scipy.sparse or numpy array)
+        k: Hop constraint (-1 for full APSP)
+        verbose: Show progress
+    Returns:
+        D: Distance matrix as numpy int32 array
+    """</code></pre>
 
-# Compare all methods
-python main.py -m compare -i path/to/graph.txt -r</code></pre>
+<h3>Example Usage</h3>
+<pre><code>import sys
+sys.path.insert(0, '02_Implementations')
 
-<h3>Available Modes</h3>
-<table>
-  <tr><th>Mode</th><th>Command</th><th>Description</th></tr>
-  <tr><td><code>storm</code></td><td><code>-m storm</code></td><td>Sparse STORM APSP (default)</td></tr>
-  <tr><td><code>dense</code></td><td><code>-m dense</code></td><td>Dense STORM (small graphs)</td></tr>
-  <tr><td><code>gpu</code></td><td><code>-m gpu</code></td><td>GPU-accelerated (requires CuPy)</td></tr>
-  <tr><td><code>pe</code></td><td><code>-m pe</code></td><td>STORM-PE reachability profiles</td></tr>
-  <tr><td><code>girth</code></td><td><code>-m girth</code></td><td>Graph girth computation</td></tr>
-  <tr><td><code>nx</code></td><td><code>-m nx</code></td><td>NetworkX baseline</td></tr>
-  <tr><td><code>compare</code></td><td><code>-m compare</code></td><td>Benchmark all methods</td></tr>
-</table>
-
-<h3>Key Options</h3>
-<table>
-  <tr><th>Flag</th><th>Description</th><th>Default</th></tr>
-  <tr><td><code>-i</code></td><td>Input graph file path</td><td>(required)</td></tr>
-  <tr><td><code>-r</code></td><td>Real-world edge-list format</td><td>False</td></tr>
-  <tr><td><code>-k</code></td><td>Hop constraint (-1 for full)</td><td>-1</td></tr>
-  <tr><td><code>-d</code></td><td>Directed graph</td><td>False</td></tr>
-  <tr><td><code>-o</code></td><td>Output distance matrix file</td><td>None</td></tr>
-</table>
-
-<h3>Python API</h3>
-<pre><code>from storm.core_cython import cython_storm_apsp
-from storm.loader import load_graph
+import scipy.sparse as sp
+from common.loader import load_graph, make_undirected
 
 # Load graph
-A, n, m = load_graph('graph.txt', fmt='edgelist', directed=False)
+A, n, m = load_graph('04_Datasets/real-world/facebook_combined.txt',
+                      fmt='edgelist', directed=True)
+A = make_undirected(A)
 
-# Full APSP
-D = cython_storm_apsp(A, verbose=True)
+# Run any method
+from TC1_DSTORM_SpMM_Cython.apsp import run_apsp
+D = run_apsp(A, verbose=True)
+print(f"Distance matrix: {D.shape}, max distance: {D.max()}")
 
-# Hop-constrained (k=5)
-D_approx = cython_storm_apsp(A, k=5, verbose=True)
+# GPU method
+from TG2_DSTORM_CUDA.apsp import run_apsp as run_gpu
+D_gpu = run_gpu(A, verbose=True)</code></pre>
 
-# Dynamic edge addition
-from storm.dynamic import DynamicStorm
-ds = DynamicStorm(A, D)
-ds.add_edge(u, v)  # 22-33x faster than recomputation</code></pre>
+<h3>Available Methods</h3>
+<table>
+  <tr><th>ID</th><th>Import</th><th>Platform</th></tr>
+  <tr><td>BC1</td><td><code>BC1_NetworkX.apsp</code></td><td>CPU</td></tr>
+  <tr><td>BC2</td><td><code>BC2_SciPy.apsp</code></td><td>CPU</td></tr>
+  <tr><td>BC3</td><td><code>BC3_IAORM.apsp</code></td><td>CPU</td></tr>
+  <tr><td>BC4</td><td><code>BC4_MAORM.apsp</code></td><td>CPU</td></tr>
+  <tr><td>BC5</td><td><code>BC5_GB_bfs.apsp</code></td><td>CPU (GraphBLAS)</td></tr>
+  <tr><td>TC1</td><td><code>TC1_DSTORM_SpMM_Cython.apsp</code></td><td>CPU</td></tr>
+  <tr><td>TC2</td><td><code>TC2_DSTORM_NumpyBLAS.apsp</code></td><td>CPU</td></tr>
+  <tr><td>TC3</td><td><code>TC3_DSTORM_GraphBLAS.apsp</code></td><td>CPU (GraphBLAS)</td></tr>
+  <tr><td>BG1</td><td><code>BG1_GPU_PerSrc_BFS.apsp</code></td><td>GPU (CUDA)</td></tr>
+  <tr><td>TG1</td><td><code>TG1_DSTORM_cuBLAS.apsp</code></td><td>GPU (cuBLAS)</td></tr>
+  <tr><td>TG2</td><td><code>TG2_DSTORM_CUDA.apsp</code></td><td>GPU (CUDA)</td></tr>
+</table>
 </section>
 
-<section id="experiments">
-<h2>4. Running Experiments</h2>
-
-<h3>Main Benchmark</h3>
-<pre><code>cd ../03_experiment_result
-python run_benchmark.py</code></pre>
-<p>This runs all six experiments (Facebook, BA scalability, topologies, hop-constrained, progressive sparsity, D-STORM) and saves results to <code>storm_results.json</code>.</p>
-
-<h3>Grid Visualization</h3>
-<pre><code>cd ../03_a_experimental_result
-python run_grid_visual.py</code></pre>
-<p>Generates distance matrix heatmaps comparing STORM (k=2,4,8,16,32) with SciPy exact APSP on a 20×20 grid.</p>
-
-<h3>Supported Graph Formats</h3>
+<section id="formats">
+<h2>4. Supported Graph Formats</h2>
 <table>
   <tr><th>Format</th><th>Extension</th><th>Description</th></tr>
   <tr><td>Edge list</td><td><code>.txt, .csv, .tsv, .edges</code></td><td>One edge per line: <code>src dst</code></td></tr>
@@ -127,7 +143,7 @@ python run_grid_visual.py</code></pre>
 </div>
 
 <footer>
-  <p><a href="index.html">← Back to Home</a> | <a href="https://github.com/dknife/STORM">GitHub</a></p>
+  <p><a href="index.html">&larr; Back to Home</a> | <a href="https://github.com/dknife/STORM">GitHub</a></p>
 </footer>
 
 </body>

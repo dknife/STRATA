@@ -127,49 +127,6 @@ PLC-2000 & PL cluster & 2,000 & 19,926 & 5 & \texttt{powerlaw\_cluster(2000,5,0.
 \section{벤치마킹 결과}
 %======================================================================
 
-\subsection{Facebook --- GPU 기법 (4종)}
-
-\begin{table}[H]\centering
-\caption{Facebook ($n\!=\!4{,}039$): GPU 4종 순위}
-\label{tab:fb-gpu}
-\small
-\begin{tabular}{@{}rllrrr@{}}
-\toprule
-\textbf{\#} & \textbf{ID} & \textbf{기법} & \textbf{시간 (s)} & \textbf{vs SciPy} & \textbf{분류} \\
-\midrule
-\rowcolor{newbest!15} 1 & BG1 & GPU-PerSrc-BFS & \textbf{0.016} & 122$\times$ & Baseline \\
-\rowcolor{newbest!10} 2 & BG2 & DAWN-SOVM & 0.019 & 101$\times$ & Baseline \\
-\rowcolor{gpucol!8} 3 & TG2 & D-STORM-CUDA & 0.028 & 68$\times$ & D-STORM \\
-4 & TG1 & D-STORM-DAWNiBFS & 0.247 & 7.8$\times$ & D-STORM \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-  xbar, width=0.88\textwidth, height=5cm, bar width=10pt,
-  xlabel={실행 시간 (초)},
-  symbolic y coords={BG1,BG2,TG2,TG1},
-  ytick=data,
-  yticklabels={GPU-PerSrc-BFS (BG1),DAWN-SOVM (BG2),D-STORM-CUDA (TG2),D-STORM-DAWNiBFS (TG1)},
-  xmin=0, xmax=0.30,
-  enlarge y limits={abs=10pt},
-  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
-  nodes near coords style={font=\scriptsize, anchor=west},
-  y tick label style={font=\small},
-]
-\addplot[fill=yellow!50, draw=yellow!70!black, forget plot]
-  coordinates {(0.016,BG1) (0.019,BG2)};
-\addplot[fill=purple!40, draw=purple!60!black, bar shift=0pt, forget plot]
-  coordinates {(0.028,TG2) (0.247,TG1)};
-\end{axis}
-\end{tikzpicture}
-\caption{Facebook APSP --- GPU 기법. BG1/BG2/TG2가 Tier~1, TG1이 Tier~2.}
-\label{fig:fb-gpu}
-\end{figure}
-
 \subsection{Facebook --- CPU 기법 (8종)}
 
 \begin{table}[H]\centering
@@ -217,23 +174,48 @@ PLC-2000 & PL cluster & 2,000 & 19,926 & 5 & \texttt{powerlaw\_cluster(2000,5,0.
 \label{fig:fb-cpu}
 \end{figure}
 
-\subsection{위상별 비교 --- GPU 기법}
+\subsection{Facebook --- GPU 기법 (4종)}
 
 \begin{table}[H]\centering
-\caption{위상별 GPU 4기법 (초, \textbf{볼드}=해당 위상 최고)}
-\label{tab:topo-gpu}
-\scriptsize
-\begin{tabular}{@{}clrrrrrr@{}}
+\caption{Facebook ($n\!=\!4{,}039$): GPU 4종 순위}
+\label{tab:fb-gpu}
+\small
+\begin{tabular}{@{}rllrrr@{}}
 \toprule
-\textbf{ID} & \textbf{기법} & \textbf{Facebook} & \textbf{BA} & \textbf{WS} & \textbf{ER} & \textbf{Grid} & \textbf{PLC} \\
+\textbf{\#} & \textbf{ID} & \textbf{기법} & \textbf{시간 (s)} & \textbf{vs SciPy} & \textbf{분류} \\
 \midrule
-\rowcolor{newbest!12} BG1 & GPU-PerSrc-BFS & \textbf{0.016} & 0.006 & 0.005 & 0.006 & \textbf{0.006} & 0.003 \\
-\rowcolor{newbest!8} BG2 & DAWN-SOVM & 0.019 & 0.006 & 0.005 & 0.006 & 0.006 & \textbf{0.003} \\
-\rowcolor{gpucol!6} TG2 & D-STORM-CUDA & 0.028 & \textbf{0.005} & 0.008 & \textbf{0.005} & 0.016 & 0.005 \\
-TG1 & D-STORM-DAWNiBFS & 0.247 & 0.019 & \textbf{0.009} & 0.012 & 0.032 & 0.016 \\
+\rowcolor{newbest!15} 1 & BG1 & GPU-PerSrc-BFS & \textbf{0.016} & 122$\times$ & Baseline \\
+\rowcolor{newbest!10} 2 & BG2 & DAWN-SOVM & 0.019 & 101$\times$ & Baseline \\
+\rowcolor{gpucol!8} 3 & TG2 & D-STORM-CUDA & 0.028 & 68$\times$ & D-STORM \\
+4 & TG1 & D-STORM-DAWNiBFS & 0.247 & 7.8$\times$ & D-STORM \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  xbar, width=0.88\textwidth, height=5cm, bar width=10pt,
+  xlabel={실행 시간 (초)},
+  symbolic y coords={BG1,BG2,TG2,TG1},
+  ytick=data,
+  yticklabels={GPU-PerSrc-BFS (BG1),DAWN-SOVM (BG2),D-STORM-CUDA (TG2),D-STORM-DAWNiBFS (TG1)},
+  xmin=0, xmax=0.30,
+  enlarge y limits={abs=10pt},
+  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
+  nodes near coords style={font=\scriptsize, anchor=west},
+  y tick label style={font=\small},
+]
+\addplot[fill=yellow!50, draw=yellow!70!black, forget plot]
+  coordinates {(0.016,BG1) (0.019,BG2)};
+\addplot[fill=purple!40, draw=purple!60!black, bar shift=0pt, forget plot]
+  coordinates {(0.028,TG2) (0.247,TG1)};
+\end{axis}
+\end{tikzpicture}
+\caption{Facebook APSP --- GPU 기법. BG1/BG2/TG2가 Tier~1, TG1이 Tier~2.}
+\label{fig:fb-gpu}
+\end{figure}
 
 \subsection{위상별 비교 --- CPU 기법}
 
@@ -258,22 +240,43 @@ BC1 & NetworkX & 14.073 & 1.147 & 1.218 & 1.366 & 1.031 & 1.220 \\
 \end{tabular}}
 \end{table}
 
-\subsection{전체 순위 --- GPU (6개 그래프 총합)}
+\subsection{위상별 비교 --- GPU 기법}
 
 \begin{table}[H]\centering
-\caption{GPU 4기법: 6개 그래프 총합}
-\label{tab:grand-gpu}
-\small
-\begin{tabular}{@{}rclrr@{}}
+\caption{위상별 GPU 4기법 (초, \textbf{볼드}=해당 위상 최고)}
+\label{tab:topo-gpu}
+\scriptsize
+\begin{tabular}{@{}clrrrrrr@{}}
 \toprule
-\textbf{\#} & \textbf{ID} & \textbf{기법} & \textbf{총합 (s)} & \textbf{평균 (s)} \\
+\textbf{ID} & \textbf{기법} & \textbf{Facebook} & \textbf{BA} & \textbf{WS} & \textbf{ER} & \textbf{Grid} & \textbf{PLC} \\
 \midrule
-\rowcolor{newbest!12} 1 & BG1 & GPU-PerSrc-BFS & \textbf{0.041} & 0.007 \\
-\rowcolor{newbest!8} 2 & BG2 & DAWN-SOVM & 0.045 & 0.008 \\
-\rowcolor{gpucol!6} 3 & TG2 & D-STORM-CUDA & 0.068 & 0.011 \\
-4 & TG1 & D-STORM-DAWNiBFS & 0.334 & 0.056 \\
+\rowcolor{newbest!12} BG1 & GPU-PerSrc-BFS & \textbf{0.016} & 0.006 & 0.005 & 0.006 & \textbf{0.006} & 0.003 \\
+\rowcolor{newbest!8} BG2 & DAWN-SOVM & 0.019 & 0.006 & 0.005 & 0.006 & 0.006 & \textbf{0.003} \\
+\rowcolor{gpucol!6} TG2 & D-STORM-CUDA & 0.028 & \textbf{0.005} & 0.008 & \textbf{0.005} & 0.016 & 0.005 \\
+TG1 & D-STORM-DAWNiBFS & 0.247 & 0.019 & \textbf{0.009} & 0.012 & 0.032 & 0.016 \\
 \bottomrule
 \end{tabular}
+\end{table}
+
+\begin{table}[H]\centering
+\caption{위상별 CPU 8기법 (초, \textbf{볼드}=해당 위상 CPU 최고)}
+\label{tab:topo-cpu}
+\scriptsize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}clrrrrrr@{}}
+\toprule
+\textbf{ID} & \textbf{기법} & \textbf{Facebook} & \textbf{BA} & \textbf{WS} & \textbf{ER} & \textbf{Grid} & \textbf{PLC} \\
+\midrule
+\rowcolor{cpubest!8} TC1 & D-STORM-SpMM-Cython & \textbf{0.984} & \textbf{0.277} & \textbf{0.290} & \textbf{0.300} & \textbf{0.159} & \textbf{0.284} \\
+TC2 & D-STORM-NumpyBLAS & 1.697 & 0.301 & 0.441 & 0.343 & \cellcolor{gridwarn!12}3.633 & 0.312 \\
+TC3 & D-STORM-GraphBLAS & 1.921 & 0.472 & 0.493 & 0.483 & 0.590 & 0.471 \\
+BC2 & SciPy & 1.918 & 0.309 & 0.291 & 0.314 & 0.161 & 0.313 \\
+BC4 & M-AORM & 2.831 & 0.401 & 0.579 & 0.467 & \cellcolor{gridwarn!12}5.434 & 0.390 \\
+BC5 & GB-bfs & 4.071 & 1.144 & 1.258 & 1.176 & 3.590 & 1.188 \\
+BC3 & I-AORM & 8.693 & 0.393 & 0.512 & 0.430 & \cellcolor{gridwarn!12}4.461 & 0.397 \\
+BC1 & NetworkX & 14.073 & 1.147 & 1.218 & 1.366 & 1.031 & 1.220 \\
+\bottomrule
+\end{tabular}}
 \end{table}
 
 \subsection{전체 순위 --- CPU (6개 그래프 총합)}
@@ -294,6 +297,24 @@ BC1 & NetworkX & 14.073 & 1.147 & 1.218 & 1.366 & 1.031 & 1.220 \\
 6 & BC5 & GB-bfs & 12.428 & 2.071 \\
 7 & BC3 & I-AORM & 14.885 & 2.481 \\
 8 & BC1 & NetworkX & 20.054 & 3.342 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{전체 순위 --- GPU (6개 그래프 총합)}
+
+\begin{table}[H]\centering
+\caption{GPU 4기법: 6개 그래프 총합}
+\label{tab:grand-gpu}
+\small
+\begin{tabular}{@{}rclrr@{}}
+\toprule
+\textbf{\#} & \textbf{ID} & \textbf{기법} & \textbf{총합 (s)} & \textbf{평균 (s)} \\
+\midrule
+\rowcolor{newbest!12} 1 & BG1 & GPU-PerSrc-BFS & \textbf{0.041} & 0.007 \\
+\rowcolor{newbest!8} 2 & BG2 & DAWN-SOVM & 0.045 & 0.008 \\
+\rowcolor{gpucol!6} 3 & TG2 & D-STORM-CUDA & 0.068 & 0.011 \\
+4 & TG1 & D-STORM-DAWNiBFS & 0.334 & 0.056 \\
 \bottomrule
 \end{tabular}
 \end{table}

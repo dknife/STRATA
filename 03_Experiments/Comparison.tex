@@ -244,24 +244,45 @@ BC1 & NetworkX & 14.073 & 1.147 & 1.218 & 1.366 & 1.031 & 1.220 \\
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-  xbar, width=0.88\textwidth, height=7cm, bar width=9pt,
-  xlabel={실행 시간 (초)},
-  symbolic y coords={TC1,TC2,TC3,BC2,BC4,BC5,BC3,BC1},
-  ytick=data,
-  yticklabels={D-STORM-SpMM-Cython,D-STORM-NumpyBLAS,D-STORM-GraphBLAS,SciPy,M-AORM,GB-bfs,I-AORM,NetworkX},
-  xmin=0, xmax=16,
-  enlarge y limits={abs=8pt},
-  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
-  nodes near coords style={font=\scriptsize, anchor=west},
-  y tick label style={font=\small},
+  width=0.94\textwidth, height=8.5cm,
+  xlabel={그래프 위상}, ylabel={실행 시간 (초, log scale)},
+  ymode=log, ymin=0.08, ymax=20,
+  log ticks with fixed point,
+  symbolic x coords={Facebook,BA,WS,ER,Grid,PLC},
+  xtick=data, x tick label style={font=\small},
+  legend style={at={(0.98,0.98)}, anchor=north east, font=\scriptsize, cells={anchor=west}},
+  grid=major, grid style={gray!25},
+  mark size=3pt, thick,
 ]
-\addplot[fill=blue!40, draw=blue!60!black, forget plot]
-  coordinates {(0.984,TC1) (1.697,TC2) (1.921,TC3)};
-\addplot[fill=orange!18, draw=orange!50!black, bar shift=0pt, forget plot]
-  coordinates {(1.918,BC2) (2.831,BC4) (4.071,BC5) (8.693,BC3) (14.073,BC1)};
+% D-STORM CPU (blue tones, solid)
+\addplot[color=blue!80!black, mark=square*, mark options={fill=blue!60}]
+  coordinates {(Facebook,0.984)(BA,0.277)(WS,0.290)(ER,0.300)(Grid,0.159)(PLC,0.284)};
+\addlegendentry{TC1 D-STORM-SpMM-Cython}
+\addplot[color=blue!50!black, mark=triangle*, mark options={fill=blue!30}]
+  coordinates {(Facebook,1.697)(BA,0.301)(WS,0.441)(ER,0.343)(Grid,3.633)(PLC,0.312)};
+\addlegendentry{TC2 D-STORM-NumpyBLAS}
+\addplot[color=blue!30!black, mark=diamond*, mark options={fill=blue!15}]
+  coordinates {(Facebook,1.921)(BA,0.472)(WS,0.493)(ER,0.483)(Grid,0.590)(PLC,0.471)};
+\addlegendentry{TC3 D-STORM-GraphBLAS}
+% Baseline CPU (orange/red tones, dashed)
+\addplot[color=red!70!black, mark=o, dashed]
+  coordinates {(Facebook,1.918)(BA,0.309)(WS,0.291)(ER,0.314)(Grid,0.161)(PLC,0.313)};
+\addlegendentry{BC2 SciPy}
+\addplot[color=orange!80!black, mark=pentagon*, dashed, mark options={fill=orange!40}]
+  coordinates {(Facebook,2.831)(BA,0.401)(WS,0.579)(ER,0.467)(Grid,5.434)(PLC,0.390)};
+\addlegendentry{BC4 M-AORM}
+\addplot[color=orange!50!black, mark=star, dashed, mark options={fill=orange!20}]
+  coordinates {(Facebook,4.071)(BA,1.144)(WS,1.258)(ER,1.176)(Grid,3.590)(PLC,1.188)};
+\addlegendentry{BC5 GB-bfs}
+\addplot[color=red!40!black, mark=x, dashed, mark size=4pt]
+  coordinates {(Facebook,8.693)(BA,0.393)(WS,0.512)(ER,0.430)(Grid,4.461)(PLC,0.397)};
+\addlegendentry{BC3 I-AORM}
+\addplot[color=gray!60!black, mark=+, dashed, mark size=4pt]
+  coordinates {(Facebook,14.073)(BA,1.147)(WS,1.218)(ER,1.366)(Grid,1.031)(PLC,1.220)};
+\addlegendentry{BC1 NetworkX}
 \end{axis}
 \end{tikzpicture}
-\caption{위상별 CPU 기법 --- Facebook 대표 비교. TC1이 모든 위상에서 CPU 최고.}
+\caption{위상별 CPU 기법 비교 (log scale). 실선=D-STORM, 점선=Baseline. TC1이 모든 위상에서 CPU 최고.}
 \label{fig:topo-cpu}
 \end{figure}
 
@@ -287,24 +308,33 @@ TG1 & D-STORM-DAWNiBFS & 0.247 & 0.019 & \textbf{0.009} & 0.012 & 0.032 & 0.016 
 \centering
 \begin{tikzpicture}
 \begin{axis}[
-  xbar, width=0.88\textwidth, height=5cm, bar width=10pt,
-  xlabel={실행 시간 (초)},
-  symbolic y coords={BG1,BG2,TG2,TG1},
-  ytick=data,
-  yticklabels={GPU-PerSrc-BFS,DAWN-SOVM,D-STORM-CUDA,D-STORM-DAWNiBFS},
-  xmin=0, xmax=0.30,
-  enlarge y limits={abs=10pt},
-  nodes near coords={\pgfmathprintnumber[precision=3]{\pgfplotspointmeta}},
-  nodes near coords style={font=\scriptsize, anchor=west},
-  y tick label style={font=\small},
+  width=0.94\textwidth, height=7cm,
+  xlabel={그래프 위상}, ylabel={실행 시간 (초, log scale)},
+  ymode=log, ymin=0.002, ymax=0.4,
+  log ticks with fixed point,
+  symbolic x coords={Facebook,BA,WS,ER,Grid,PLC},
+  xtick=data, x tick label style={font=\small},
+  legend style={at={(0.98,0.98)}, anchor=north east, font=\scriptsize, cells={anchor=west}},
+  grid=major, grid style={gray!25},
+  mark size=3pt, thick,
 ]
-\addplot[fill=yellow!50, draw=yellow!70!black, forget plot]
-  coordinates {(0.016,BG1) (0.019,BG2)};
-\addplot[fill=purple!40, draw=purple!60!black, bar shift=0pt, forget plot]
-  coordinates {(0.028,TG2) (0.247,TG1)};
+% GPU Baseline (yellow/orange, dashed)
+\addplot[color=yellow!70!black, mark=square*, dashed, mark options={fill=yellow!50}]
+  coordinates {(Facebook,0.016)(BA,0.006)(WS,0.005)(ER,0.006)(Grid,0.006)(PLC,0.003)};
+\addlegendentry{BG1 GPU-PerSrc-BFS}
+\addplot[color=orange!70!black, mark=triangle*, dashed, mark options={fill=orange!40}]
+  coordinates {(Facebook,0.019)(BA,0.006)(WS,0.005)(ER,0.006)(Grid,0.006)(PLC,0.003)};
+\addlegendentry{BG2 DAWN-SOVM}
+% D-STORM GPU (purple, solid)
+\addplot[color=purple!70!black, mark=diamond*, mark options={fill=purple!40}]
+  coordinates {(Facebook,0.028)(BA,0.005)(WS,0.008)(ER,0.005)(Grid,0.016)(PLC,0.005)};
+\addlegendentry{TG2 D-STORM-CUDA}
+\addplot[color=purple!40!black, mark=o, mark options={fill=purple!15}]
+  coordinates {(Facebook,0.247)(BA,0.019)(WS,0.009)(ER,0.012)(Grid,0.032)(PLC,0.016)};
+\addlegendentry{TG1 D-STORM-DAWNiBFS}
 \end{axis}
 \end{tikzpicture}
-\caption{위상별 GPU 기법 --- Facebook 대표 비교. BG1/BG2/TG2가 Tier~1.}
+\caption{위상별 GPU 기법 비교 (log scale). 점선=Baseline, 실선=D-STORM. BG1/BG2/TG2가 소세계에서 수렴.}
 \label{fig:topo-gpu}
 \end{figure}
 

@@ -258,27 +258,6 @@ TG1 & D-STORM-DAWNiBFS & 0.247 & 0.019 & \textbf{0.009} & 0.012 & 0.032 & 0.016 
 \end{tabular}
 \end{table}
 
-\begin{table}[H]\centering
-\caption{위상별 CPU 8기법 (초, \textbf{볼드}=해당 위상 CPU 최고)}
-\label{tab:topo-cpu}
-\scriptsize
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{@{}clrrrrrr@{}}
-\toprule
-\textbf{ID} & \textbf{기법} & \textbf{Facebook} & \textbf{BA} & \textbf{WS} & \textbf{ER} & \textbf{Grid} & \textbf{PLC} \\
-\midrule
-\rowcolor{cpubest!8} TC1 & D-STORM-SpMM-Cython & \textbf{0.984} & \textbf{0.277} & \textbf{0.290} & \textbf{0.300} & \textbf{0.159} & \textbf{0.284} \\
-TC2 & D-STORM-NumpyBLAS & 1.697 & 0.301 & 0.441 & 0.343 & \cellcolor{gridwarn!12}3.633 & 0.312 \\
-TC3 & D-STORM-GraphBLAS & 1.921 & 0.472 & 0.493 & 0.483 & 0.590 & 0.471 \\
-BC2 & SciPy & 1.918 & 0.309 & 0.291 & 0.314 & 0.161 & 0.313 \\
-BC4 & M-AORM & 2.831 & 0.401 & 0.579 & 0.467 & \cellcolor{gridwarn!12}5.434 & 0.390 \\
-BC5 & GB-bfs & 4.071 & 1.144 & 1.258 & 1.176 & 3.590 & 1.188 \\
-BC3 & I-AORM & 8.693 & 0.393 & 0.512 & 0.430 & \cellcolor{gridwarn!12}4.461 & 0.397 \\
-BC1 & NetworkX & 14.073 & 1.147 & 1.218 & 1.366 & 1.031 & 1.220 \\
-\bottomrule
-\end{tabular}}
-\end{table}
-
 \subsection{전체 순위 --- CPU (6개 그래프 총합)}
 
 \begin{table}[H]\centering

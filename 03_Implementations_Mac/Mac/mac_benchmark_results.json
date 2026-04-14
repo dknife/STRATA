@@ -1,0 +1,242 @@
+{
+  "Facebook": {
+    "info": {
+      "n": 4039,
+      "m": 176468,
+      "type": "social",
+      "diam": 8
+    },
+    "results": {
+      "BCM1": {
+        "label": "NetworkX",
+        "time": 20.2935765000002,
+        "check": "ref"
+      },
+      "BCM2": {
+        "label": "SciPy",
+        "time": 2.9083552500087535,
+        "check": "PASS"
+      },
+      "BCM3": {
+        "label": "I-AORM",
+        "time": 3.4310987919889158,
+        "check": "PASS"
+      },
+      "BCM4": {
+        "label": "M-AORM",
+        "time": 4.9643337079905905,
+        "check": "PASS"
+      },
+      "TCM1": {
+        "label": "D-STORM-SpMM",
+        "time": 1.3614807080011815,
+        "check": "PASS"
+      },
+      "TCM2": {
+        "label": "D-STORM-NumpyBLAS",
+        "time": 1.8685844160063425,
+        "check": "PASS"
+      }
+    }
+  },
+  "BA-2000": {
+    "info": {
+      "n": 2000,
+      "m": 19950,
+      "type": "BA",
+      "diam": 5
+    },
+    "results": {
+      "BCM1": {
+        "label": "NetworkX",
+        "time": 1.5582019580033375,
+        "check": "ref"
+      },
+      "BCM2": {
+        "label": "SciPy",
+        "time": 0.47342483399552293,
+        "check": "PASS"
+      },
+      "BCM3": {
+        "label": "I-AORM",
+        "time": 0.34402904100716114,
+        "check": "PASS"
+      },
+      "BCM4": {
+        "label": "M-AORM",
+        "time": 0.4899727080046432,
+        "check": "PASS"
+      },
+      "TCM1": {
+        "label": "D-STORM-SpMM",
+        "time": 0.34793020799406804,
+        "check": "PASS"
+      },
+      "TCM2": {
+        "label": "D-STORM-NumpyBLAS",
+        "time": 0.2752631659968756,
+        "check": "PASS"
+      }
+    }
+  },
+  "WS-2000": {
+    "info": {
+      "n": 2000,
+      "m": 12000,
+      "type": "WS",
+      "diam": 8
+    },
+    "results": {
+      "BCM1": {
+        "label": "NetworkX",
+        "time": 1.5569310419959947,
+        "check": "ref"
+      },
+      "BCM2": {
+        "label": "SciPy",
+        "time": 0.4380291250126902,
+        "check": "PASS"
+      },
+      "BCM3": {
+        "label": "I-AORM",
+        "time": 0.42969908298982773,
+        "check": "PASS"
+      },
+      "BCM4": {
+        "label": "M-AORM",
+        "time": 0.7551513750076992,
+        "check": "PASS"
+      },
+      "TCM1": {
+        "label": "D-STORM-SpMM",
+        "time": 0.36548887500248384,
+        "check": "PASS"
+      },
+      "TCM2": {
+        "label": "D-STORM-NumpyBLAS",
+        "time": 0.40740308399836067,
+        "check": "PASS"
+      }
+    }
+  },
+  "ER-2000": {
+    "info": {
+      "n": 2000,
+      "m": 19882,
+      "type": "ER",
+      "diam": 6
+    },
+    "results": {
+      "BCM1": {
+        "label": "NetworkX",
+        "time": 1.7623290409974288,
+        "check": "ref"
+      },
+      "BCM2": {
+        "label": "SciPy",
+        "time": 0.4813405419990886,
+        "check": "PASS"
+      },
+      "BCM3": {
+        "label": "I-AORM",
+        "time": 0.40057445800630376,
+        "check": "PASS"
+      },
+      "BCM4": {
+        "label": "M-AORM",
+        "time": 0.5761212090001209,
+        "check": "PASS"
+      },
+      "TCM1": {
+        "label": "D-STORM-SpMM",
+        "time": 0.3874951660109218,
+        "check": "PASS"
+      },
+      "TCM2": {
+        "label": "D-STORM-NumpyBLAS",
+        "time": 0.3160260830045445,
+        "check": "PASS"
+      }
+    }
+  },
+  "Grid-45x45": {
+    "info": {
+      "n": 2025,
+      "m": 7920,
+      "type": "Grid",
+      "diam": 88
+    },
+    "results": {
+      "BCM1": {
+        "label": "NetworkX",
+        "time": 1.3507539159909356,
+        "check": "ref"
+      },
+      "BCM2": {
+        "label": "SciPy",
+        "time": 0.29919887500000186,
+        "check": "PASS"
+      },
+      "BCM3": {
+        "label": "I-AORM",
+        "time": 3.051029666006798,
+        "check": "PASS"
+      },
+      "BCM4": {
+        "label": "M-AORM",
+        "time": 7.532632458009175,
+        "check": "PASS"
+      },
+      "TCM1": {
+        "label": "D-STORM-SpMM",
+        "time": 0.20587700000032783,
+        "check": "PASS"
+      },
+      "TCM2": {
+        "label": "D-STORM-NumpyBLAS",
+        "time": 3.170316624993575,
+        "check": "PASS"
+      }
+    }
+  },
+  "PLC-2000": {
+    "info": {
+      "n": 2000,
+      "m": 19926,
+      "type": "PLC",
+      "diam": 5
+    },
+    "results": {
+      "BCM1": {
+        "label": "NetworkX",
+        "time": 1.5950745000009192,
+        "check": "ref"
+      },
+      "BCM2": {
+        "label": "SciPy",
+        "time": 0.4748508330085315,
+        "check": "PASS"
+      },
+      "BCM3": {
+        "label": "I-AORM",
+        "time": 0.3446163749904372,
+        "check": "PASS"
+      },
+      "BCM4": {
+        "label": "M-AORM",
+        "time": 0.4908175000018673,
+        "check": "PASS"
+      },
+      "TCM1": {
+        "label": "D-STORM-SpMM",
+        "time": 0.3499077909946209,
+        "check": "PASS"
+      },
+      "TCM2": {
+        "label": "D-STORM-NumpyBLAS",
+        "time": 0.275858958993922,
+        "check": "PASS"
+      }
+    }
+  }
+}

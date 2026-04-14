@@ -1,0 +1,98 @@
+{
+  "Facebook": {
+    "info": {
+      "n": 4039,
+      "m": 176468,
+      "diam": 8
+    },
+    "results": {
+      "BB1": {
+        "label": "Brandes-Python",
+        "time": 179.05502730002627,
+        "check": "ref"
+      },
+      "BB2": {
+        "label": "Brandes-C (igraph)",
+        "time": 0.9122508000582457,
+        "check": "PASS"
+      },
+      "TB1": {
+        "label": "Matrix-Brandes (D-STORM)",
+        "time": 0.42334929993376136,
+        "check": "PASS"
+      }
+    }
+  },
+  "BA-2000": {
+    "info": {
+      "n": 2000,
+      "m": 19950,
+      "diam": 5
+    },
+    "results": {
+      "BB1": {
+        "label": "Brandes-Python",
+        "time": 16.371632600203156,
+        "check": "ref"
+      },
+      "BB2": {
+        "label": "Brandes-C (igraph)",
+        "time": 0.187748400028795,
+        "check": "PASS"
+      },
+      "TB1": {
+        "label": "Matrix-Brandes (D-STORM)",
+        "time": 0.08804699964821339,
+        "check": "PASS"
+      }
+    }
+  },
+  "WS-2000": {
+    "info": {
+      "n": 2000,
+      "m": 12000,
+      "diam": 8
+    },
+    "results": {
+      "BB1": {
+        "label": "Brandes-Python",
+        "time": 11.484260899946094,
+        "check": "ref"
+      },
+      "BB2": {
+        "label": "Brandes-C (igraph)",
+        "time": 0.14624489983543754,
+        "check": "PASS"
+      },
+      "TB1": {
+        "label": "Matrix-Brandes (D-STORM)",
+        "time": 0.09339499985799193,
+        "check": "PASS"
+      }
+    }
+  },
+  "BA-500": {
+    "info": {
+      "n": 500,
+      "m": 4950,
+      "diam": 4
+    },
+    "results": {
+      "BB1": {
+        "label": "Brandes-Python",
+        "time": 0.9578988999128342,
+        "check": "ref"
+      },
+      "BB2": {
+        "label": "Brandes-C (igraph)",
+        "time": 0.011255000252276659,
+        "check": "PASS"
+      },
+      "TB1": {
+        "label": "Matrix-Brandes (D-STORM)",
+        "time": 0.00495269987732172,
+        "check": "PASS"
+      }
+    }
+  }
+}

@@ -4,97 +4,74 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ## Project Overview
 
-D-STORM (Dynamic Sparse Topology-aware Optimal Reachability Matrix) is a research framework for computing all-pairs shortest paths (APSP) on graphs. It extends the AORM framework (IEEE Access, 2021) with sparse matrix redesign, Cython fused pruning, CUDA GPU acceleration, and GraphBLAS baseline comparison.
+D-STORM (Dynamic Sparse Topology-aware Optimal Reachability Matrix) is a research framework for APSP on graphs. 12 implementations (5 CPU baselines, 3 D-STORM CPU, 2 GPU baselines, 2 D-STORM GPU) benchmarked across 6 graph topologies + scaling analysis.
 
 **GitHub:** https://github.com/dknife/STORM
 **Pages:** https://dknife.github.io/STORM
 
 ## Directory Structure
 
-- **AORM-main/** — Original AORM implementation (2021). Dense numpy matrices. Reference only.
-- **02_STORM_Implement/** — CPU D-STORM. Cython fused pruning kernel + NumPy fallback.
-- **02_STORM_GPU_Implement/** — GPU D-STORM. cuBLAS (GPU-Dense) and cuSPARSE (GPU-Sparse).
-- **03_Baseline_GraphBLAS/** — SuiteSparse:GraphBLAS APSP baseline via CFFI.
-- **03_experiment_result/** — Benchmark scripts, JSON data, LaTeX reports (종합보고.tex).
-- **03_a_experimental_result/** — Grid approximation visualizations (PNG).
-- **05_Integrated/** — Extended paper (storm_extended.tex, IEEEtran format).
-- **06_FinalPaper/** — ACM sigconf paper (main.tex, D-STORM submission draft).
-- **docs/** — GitHub Pages website (index.html, howto.html, references.html).
+- **02_Implementations/** — 12 APSP implementations (BC1-BC5, TC1-TC3, BG1-BG2, TG1-TG2) + common/ + benchmark scripts.
+- **03_Experiments/** — Comparison.tex (12-method report, Korean, 12 pages).
+- **04_Datasets/** — Facebook (real-world), simple, synthetic graphs.
+- **05_Integrated/** — Extended paper (gitignored).
+- **06_FinalPaper/** — ACM sigconf paper (gitignored).
+- **Z_OldExperiments/** — Archived old implementations (gitignored).
+- **docs/** — GitHub Pages website.
 
 ## Running
 
-### CPU D-STORM
+### Full Benchmark (12 methods x 6 graphs)
 ```bash
-cd 02_STORM_Implement
-pip install -r requirements.txt
-
-# Full APSP on edge-list graph
-python main.py -m storm -i ../AORM-main/datasets/real-world/facebook_combined.txt -r
-
-# Hop-constrained (k=5)
-python main.py -m storm -i graph.txt -r -k 5
-
-# Compare all CPU methods
-python main.py -m compare -i graph.txt -r
-```
-
-### GPU D-STORM
-```bash
-cd 02_STORM_GPU_Implement
-pip install -r requirements.txt
-
-# GPU sparse (recommended for n >= 2000)
-python main.py -m sparse -i graph.txt -r
-
-# GPU dense (fastest for n < 2000)
-python main.py -m dense -i graph.txt -r
-
-# Compare GPU vs CPU
-python main.py -m compare -i graph.txt -r
-```
-
-### GraphBLAS Baseline
-```bash
-cd 03_Baseline_GraphBLAS
-pip install suitesparse-graphblas -r requirements.txt
-python main.py -m compare -i graph.txt -r
-```
-
-### Full Benchmark (10 methods x 10 datasets)
-```bash
-cd 03_experiment_result
+cd 02_Implementations
+pip install numpy scipy networkx cupy-cuda12x tqdm
 python run_full_benchmark.py
+
+# TC3 (GraphBLAS) — separate process due to GrB_init conflict with BC5
+pip install suitesparse-graphblas
+python run_tc3_standalone.py
 ```
 
-## Architecture
+### Individual Method
+```python
+import sys; sys.path.insert(0, '02_Implementations')
+from TC1_DSTORM_SpMM_Cython.apsp import run_apsp
+D = run_apsp(A_csr, k=-1, verbose=True)  # returns int32 distance matrix
+```
 
-### CPU D-STORM (02_STORM_Implement/storm/)
-- **core.py** — `SparseStormIterator`: scipy CSR SpMM + Cython fused pruning (or NumPy vectorized fallback). Dense Boolean footprint for O(1) lookup.
-- **_storm_core.pyx** — Cython C-extension: single-pass COO scan for prune + footprint update.
-- **apsp.py** — `storm_apsp()` (sparse), `storm_apsp_dense()` (BLAS matmul).
-- **dynamic.py** — D-STORM edge insertion: D'(i,j) = min(D(i,j), D(i,a)+1+D(b,j)).
-- **loader.py** — Multi-format graph loader (edgelist, gpickle, npz).
+## Implementations
 
-### GPU D-STORM (02_STORM_GPU_Implement/storm_gpu/)
-- **cuda_env.py** — Auto-detects CUDA_PATH from pip-installed nvidia packages.
-- **core.py** — `GpuSparseStormIterator` (cuSPARSE), `GpuDenseStormIterator` (cuBLAS).
-- **apsp.py** — `gpu_storm_apsp()`, `gpu_storm_apsp_dense()`.
+| ID | Method | Kernel | Platform |
+|----|--------|--------|----------|
+| BC1 | NetworkX | Python BFS | CPU |
+| BC2 | SciPy | C BFS | CPU |
+| BC3 | I-AORM | edge-wise row sum | CPU |
+| BC4 | M-AORM | dense BLAS matmul | CPU |
+| BC5 | GB-bfs | GrB_vxm masked BFS | CPU |
+| TC1 | D-STORM-SpMM-Cython | SciPy SpMM + Cython fused prune | CPU |
+| TC2 | D-STORM-NumpyBLAS | NumPy BLAS matmul | CPU |
+| TC3 | D-STORM-GraphBLAS | GrB_mxm + complement mask | CPU |
+| BG1 | GPU-PerSrc-BFS | CUDA block-per-source BFS | GPU |
+| BG2 | DAWN-SOVM | CUDA frontier-driven BFS (DAWN ICS 2024) | GPU |
+| TG1 | D-STORM-DAWNiBFS | Bitwise frontier sharing (DAWN + iBFS SIGMOD 2016) | GPU |
+| TG2 | D-STORM-CUDA | CUDA CSR direct expand (guard+CAS) | GPU |
 
-### GraphBLAS (03_Baseline_GraphBLAS/)
-- **graphblas_apsp.py** — `graphblas_bfs_apsp()` (per-source GrB_vxm), `graphblas_frontier_apsp()` (GrB_mxm with LOR_LAND semiring + complement mask).
-
-## Cython Build Notes
-
-- macOS: `python setup.py build_ext --inplace`
-- Windows: setuptools may fail with Korean/Unicode paths. Use `build_cython.bat` or manual `cl`+`link` build via vcvarsall.bat. See README.md for details.
-- Without Cython: `SparseStormIterator` auto-falls back to NumPy vectorized path (~27% slower).
+**Removed:** GPU-Fused, GPU-Sparse (cuSPARSE), D-STORM-cuBLAS (O(n³)). Do not re-add.
 
 ## Key Dependencies
 
-Python 3.14+, numpy, scipy, networkx, tqdm. Optional: cupy-cuda12x (GPU), suitesparse-graphblas (GraphBLAS), cython (build).
+Python 3.14+, numpy, scipy, networkx, tqdm. Optional: cupy-cuda12x (GPU), suitesparse-graphblas (GraphBLAS).
+
+## Key Conventions
+
+- Distance matrix D: always dense int32. No sparse/float.
+- D-STORM naming: D-STORM-{kernel}. External techniques credited in name (e.g., DAWNiBFS).
+- Commits: no Co-Authored-By trailer.
+- Reports: CPU results first, GPU second.
+- Benchmark protocol: 3 runs min, GPU 1 warmup, all methods correctness-verified.
 
 ## Benchmarking Data
 
-- `03_experiment_result/full_benchmark_results.json` — 100 measurement points (10 methods x 10 datasets).
-- `03_experiment_result/storm_results.json` — Per-experiment structured data.
-- All timings: 3-run minimum, GPU with 1 warmup run.
+- `02_Implementations/full_benchmark_results.json` — 12 methods x 6 graphs.
+- `02_Implementations/tc3_benchmark_results.json` — TC3 standalone results.
+- `03_Experiments/Comparison.tex` — Full report with charts.

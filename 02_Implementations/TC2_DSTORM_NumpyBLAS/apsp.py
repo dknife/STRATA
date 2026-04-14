@@ -2,6 +2,10 @@
 
 Dense frontier propagation using BLAS-accelerated matrix multiply.
 Same D-STORM algebra as TC1 but operating on dense numpy arrays.
+
+When compute_sigma=True, preserves integer multiplication values
+(instead of Heaviside binarization) to compute sigma(s,t) — the number
+of shortest paths between all pairs. Uses float64 for precision.
 """
 
 import numpy as np
@@ -11,16 +15,18 @@ import scipy.sparse as sp
 class DenseStormIterator:
     """Dense BLAS-based reachability iterator (M-STORM / D-STORM-Dense).
 
-    R^(k+1)* = H( H(A @ R^k) - V )
-    V = V + R^(k+1)*
+    Normal mode:  R^(k+1)* = H( H(A @ R^k) - V )
+    Sigma mode:   R^(k+1)* = (A @ R^k) * mask(not V), values preserved
     """
 
-    def __init__(self, A, k=-1):
-        A = np.asarray(A, dtype=np.float32)
+    def __init__(self, A, k=-1, compute_sigma=False):
+        self.compute_sigma = compute_sigma
+        dtype = np.float64 if compute_sigma else np.float32
+        A = np.asarray(A, dtype=dtype)
         self.n = len(A)
-        self.A = np.heaviside(A, 0).astype(np.float32)
-        self.Rk = self.A.copy()
-        self.V = np.heaviside(np.eye(self.n) + self.A, 0).astype(np.float32)
+        self.A = np.heaviside(A, 0).astype(dtype)
+        self.Rk = self.A.copy()  # sigma=1 for direct neighbors
+        self.V = np.heaviside(np.eye(self.n) + self.A, 0).astype(dtype)
         self.power = 1
         self.maxpower = k
 
@@ -33,36 +39,68 @@ class DenseStormIterator:
 
         self.power += 1
         temp = self.A.dot(self.Rk)
-        temp = np.heaviside(np.heaviside(temp, 0) - self.V, 0).astype(np.float32)
 
-        if temp.sum() < 0.5:
-            raise StopIteration
+        if self.compute_sigma:
+            # Keep integer values; mask by visited set
+            new_mask = (temp > 0) & (self.V < 0.5)
+            if not new_mask.any():
+                raise StopIteration
+            Rk_star = temp * new_mask  # sigma values for new pairs only
+            self.V[new_mask] = 1.0
+        else:
+            Rk_star = np.heaviside(
+                np.heaviside(temp, 0) - self.V, 0).astype(np.float32)
+            if Rk_star.sum() < 0.5:
+                raise StopIteration
+            self.V = Rk_star + self.V
 
-        self.V = temp + self.V
-        self.Rk = temp
+        self.Rk = Rk_star
         return self.Rk, self.power
 
 
-def run_apsp(A_csr, k=-1, verbose=True):
-    """APSP via D-STORM dense (NumPy BLAS matmul)."""
+def run_apsp(A_csr, k=-1, verbose=True, compute_sigma=False):
+    """APSP via D-STORM dense (NumPy BLAS matmul).
+
+    Args:
+        A_csr: Adjacency matrix (sparse or dense).
+        k: Hop constraint (-1 for full APSP).
+        verbose: Show progress.
+        compute_sigma: If True, also compute sigma(s,t) matrix.
+            Returns (D, sigma) tuple instead of just D.
+            sigma[i,j] = number of shortest paths from i to j.
+    """
     if sp.issparse(A_csr):
         A = A_csr.toarray()
     else:
         A = np.asarray(A_csr)
-    A = A.astype(np.float32)
+    dtype = np.float64 if compute_sigma else np.float32
+    A = A.astype(dtype)
     np.fill_diagonal(A, 0)
-    A_bool = np.heaviside(A, 0).astype(np.float32)
+    A_bool = np.heaviside(A, 0).astype(dtype)
 
     n = len(A)
     if verbose:
-        print(f"  TC2 D-STORM-Dense: n={n}")
+        print(f"  TC2 D-STORM-Dense: n={n}" +
+              (" (sigma mode)" if compute_sigma else ""))
 
     D = np.zeros((n, n), dtype=np.int32)
     D[A_bool > 0] = 1
 
-    for Rk, power in DenseStormIterator(A_bool, k):
-        D[Rk > 0.5] = power
-        if verbose:
-            print(f"    hop {power}: nnz(Rk)={int(Rk.sum())}")
+    sigma = None
+    if compute_sigma:
+        sigma = np.zeros((n, n), dtype=np.float64)
+        np.fill_diagonal(sigma, 1.0)
+        sigma[A_bool > 0] = 1.0
 
+    for Rk, power in DenseStormIterator(A_bool, k,
+                                        compute_sigma=compute_sigma):
+        mask = Rk > 0.5
+        D[mask] = power
+        if compute_sigma:
+            sigma[mask] = Rk[mask]
+        if verbose:
+            print(f"    hop {power}: nnz(Rk)={int(mask.sum())}")
+
+    if compute_sigma:
+        return D, sigma
     return D

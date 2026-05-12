@@ -1,6 +1,6 @@
 """TG2: GPU-DirectExpand — CUDA direct CSR frontier expansion.
 
-D-STORM algebra without SpMM: a custom CUDA kernel directly expands
+STRATA algebra without SpMM: a custom CUDA kernel directly expands
 each frontier entry (i, j) by traversing j's CSR neighbors, checking
 the dense footprint with guard+CAS (race-free 0->1 transitions).
 

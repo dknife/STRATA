@@ -3,7 +3,7 @@ Brandes Betweenness Centrality Benchmark
 =========================================
 BB1  Brandes-Python       Pure Python per-source BFS (n loops)
 BB2  Brandes-C (igraph)   C-level Brandes via igraph
-TB1  Matrix-Brandes       D-STORM SpMM forward + SpMM backward (2d calls)
+TB1  Matrix-Brandes       STRATA SpMM forward + SpMM backward (2d calls)
 
 Protocol: 3 runs, minimum time reported.
 Correctness: all methods compared element-wise (rtol=1e-6).
@@ -29,9 +29,9 @@ FACEBOOK_PATH = os.path.join(DATASET_ROOT, 'real-world', 'facebook_combined.txt'
 RUNS = 3
 
 METHODS = [
-    ('TB2', 'Matrix-Brandes-C (D-STORM)', 'TB2_BrandesC_DSTORM.brandes'),
+    ('TB2', 'Matrix-Brandes-C (STRATA)', 'TB2_BrandesC_STRATA.brandes'),
     ('BB2', 'Brandes-C (igraph)',         'BB2_BrandesC.brandes'),
-    ('TB1', 'Matrix-Brandes-Numba',       'TB1_BrandesDSTORM.brandes'),
+    ('TB1', 'Matrix-Brandes-Numba',       'TB1_BrandesSTRATA.brandes'),
     ('BB1', 'Brandes-Python',            'BB1_BrandesPython.brandes'),
 ]
 

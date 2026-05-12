@@ -1,4 +1,4 @@
-"""TC1: D-STORM-Sparse — SciPy SpMM + Cython fused pruning.
+"""TC1: STRATA-Sparse — SciPy SpMM + Cython fused pruning.
 
 Sparse frontier propagation with cumulative dense footprint.
 Uses Cython C-extension for fused prune+update when available,
@@ -13,7 +13,7 @@ import numpy as np
 import scipy.sparse as sp
 
 
-class SparseStormIterator:
+class SparseStrataIterator:
     """Sparse incremental k-order reachability iterator.
 
     Computes R^(k)* = H(A @ R^(k-1)*) AND NOT F via:
@@ -48,7 +48,7 @@ class SparseStormIterator:
         self._fused_prune = None
         if not compute_sigma:
             try:
-                from TC1_DSTORM_Sparse._storm_core import fused_prune_and_update
+                from TC1_STRATA_Sparse._strata_core import fused_prune_and_update
                 self._fused_prune = fused_prune_and_update
             except ImportError:
                 pass
@@ -104,7 +104,7 @@ class SparseStormIterator:
 
 
 def run_apsp(A_csr, k=-1, verbose=True, compute_sigma=False):
-    """APSP via D-STORM sparse (Cython fused pruning or NumPy fallback).
+    """APSP via STRATA sparse (Cython fused pruning or NumPy fallback).
 
     Args:
         A_csr: Adjacency matrix (sparse or dense).
@@ -123,7 +123,7 @@ def run_apsp(A_csr, k=-1, verbose=True, compute_sigma=False):
 
     n = A_csr.shape[0]
     if verbose:
-        print(f"  TC1 D-STORM-Sparse: n={n}" +
+        print(f"  TC1 STRATA-Sparse: n={n}" +
               (" (sigma mode)" if compute_sigma else ""))
 
     D = np.zeros((n, n), dtype=np.int32)
@@ -136,7 +136,7 @@ def run_apsp(A_csr, k=-1, verbose=True, compute_sigma=False):
         np.fill_diagonal(sigma, 1.0)         # sigma(i,i) = 1
         sigma[A_coo.row, A_coo.col] = 1.0    # sigma=1 for direct neighbors
 
-    for Rk_star, power in SparseStormIterator(A_csr, k,
+    for Rk_star, power in SparseStrataIterator(A_csr, k,
                                               compute_sigma=compute_sigma):
         coo = Rk_star.tocoo()
         D[coo.row, coo.col] = power

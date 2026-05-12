@@ -1,5 +1,5 @@
 """
-Standalone benchmark for TC3 D-STORM-GraphBLAS.
+Standalone benchmark for TC3 STRATA-GraphBLAS.
 
 Must run in a separate process from BC5 GB-bfs to avoid
 GraphBLAS initialization conflict (GrB_init called twice).
@@ -59,7 +59,7 @@ def build_graphs():
 
 
 def main():
-    from TC3_DSTORM_GraphBLAS.apsp import run_apsp
+    from TC3_STRATA_GraphBLAS.apsp import run_apsp
     from scipy.sparse.csgraph import shortest_path
 
     print("Building graphs...")
@@ -89,7 +89,7 @@ def main():
         results[graph_name] = best
 
     print(f"\n{'='*50}")
-    print("TC3 D-STORM-GraphBLAS Results")
+    print("TC3 STRATA-GraphBLAS Results")
     print(f"{'='*50}")
     for name, t in results.items():
         print(f"  {name:<15} {t:.4f}s")

@@ -1,10 +1,8 @@
-"""TCM3: GB-frontier — D-STORM algorithm via GraphBLAS primitives (Mac).
+"""TC3: GB-frontier — STRATA algorithm via GraphBLAS primitives.
 
-Reimplements D-STORM's cumulative-footprint frontier algebra using
+Reimplements STRATA's cumulative-footprint frontier algebra using
 SuiteSparse:GraphBLAS C kernels (GrB_mxm with LOR_LAND semiring +
 structural complement mask).
-
-Requires: pip install suitesparse-graphblas
 """
 
 import numpy as np
@@ -57,12 +55,12 @@ def _grb_nvals(M):
 
 
 def run_apsp(A_csr, k=-1, verbose=True):
-    """APSP via D-STORM algorithm on GraphBLAS (GrB_mxm + complement mask)."""
+    """APSP via STRATA algorithm on GraphBLAS (GrB_mxm + complement mask)."""
     _ensure_init()
     n = A_csr.shape[0]
 
     if verbose:
-        print(f"  TCM3 GB-frontier: n={n}")
+        print(f"  TC3 GB-frontier: n={n}")
 
     A_grb = _scipy_to_grb_bool(A_csr)
 

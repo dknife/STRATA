@@ -41,13 +41,13 @@ METHODS = [
     ('BC3', 'I-AORM',           'BC3_IAORM.apsp',            False, False),
     ('BC4', 'M-AORM',           'BC4_MAORM.apsp',            False, False),
     ('BC5', 'GB-bfs',           'BC5_GB_bfs.apsp',           False, True),
-    ('TC1', 'D-STORM-SpMM-Cython', 'TC1_DSTORM_SpMM_Cython.apsp', False, False),
-    ('TC2', 'D-STORM-NumpyBLAS',  'TC2_DSTORM_NumpyBLAS.apsp',  False, False),
-    ('TC3', 'D-STORM-GraphBLAS', 'TC3_DSTORM_GraphBLAS.apsp', False, True),
+    ('TC1', 'STRATA-SpMM-Cython', 'TC1_STRATA_SpMM_Cython.apsp', False, False),
+    ('TC2', 'STRATA-NumpyBLAS',  'TC2_STRATA_NumpyBLAS.apsp',  False, False),
+    ('TC3', 'STRATA-GraphBLAS', 'TC3_STRATA_GraphBLAS.apsp', False, True),
     ('BG1', 'GPU-PerSrc-BFS',   'BG1_GPU_PerSrc_BFS.apsp',  True,  False),
     ('BG2', 'DAWN-SOVM',        'BG2_DAWN.apsp',             True,  False),
-    ('TG1', 'D-STORM-DAWNiBFS', 'TG1_DSTORM_DAWNiBFS.apsp', True,  False),
-    ('TG2', 'D-STORM-CUDA',    'TG2_DSTORM_CUDA.apsp',     True,  False),
+    ('TG1', 'STRATA-DAWNiBFS', 'TG1_STRATA_DAWNiBFS.apsp', True,  False),
+    ('TG2', 'STRATA-CUDA',    'TG2_STRATA_CUDA.apsp',     True,  False),
 ]
 
 

@@ -4,10 +4,10 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ## Project Overview
 
-D-STORM (Dynamic Sparse Topology-aware Optimal Reachability Matrix) is a research framework for APSP on graphs. 12 implementations (5 CPU baselines, 3 D-STORM CPU, 2 GPU baselines, 2 D-STORM GPU) benchmarked across 6 graph topologies + scaling analysis.
+STRATA (STratified Reachability And Topology Algebra) is a research framework for APSP on graphs. Hop-shells are stratified by distance; both σ-from-shell and level-based deletion operate on this stratification. 12 implementations (5 CPU baselines, 3 STRATA CPU, 2 GPU baselines, 2 STRATA GPU) benchmarked across 6 graph topologies + scaling analysis.
 
-**GitHub:** https://github.com/dknife/STORM
-**Pages:** https://dknife.github.io/STORM
+**GitHub:** https://github.com/dknife/STRATA
+**Pages:** https://dknife.github.io/STRATA
 
 ## Directory Structure
 
@@ -35,7 +35,7 @@ python run_tc3_standalone.py
 ### Individual Method
 ```python
 import sys; sys.path.insert(0, '02_Implementations')
-from TC1_DSTORM_SpMM_Cython.apsp import run_apsp
+from TC1_STRATA_SpMM_Cython.apsp import run_apsp
 D = run_apsp(A_csr, k=-1, verbose=True)  # returns int32 distance matrix
 ```
 
@@ -48,15 +48,15 @@ D = run_apsp(A_csr, k=-1, verbose=True)  # returns int32 distance matrix
 | BC3 | I-AORM | edge-wise row sum | CPU |
 | BC4 | M-AORM | dense BLAS matmul | CPU |
 | BC5 | GB-bfs | GrB_vxm masked BFS | CPU |
-| TC1 | D-STORM-SpMM-Cython | SciPy SpMM + Cython fused prune | CPU |
-| TC2 | D-STORM-NumpyBLAS | NumPy BLAS matmul | CPU |
-| TC3 | D-STORM-GraphBLAS | GrB_mxm + complement mask | CPU |
+| TC1 | STRATA-SpMM-Cython | SciPy SpMM + Cython fused prune | CPU |
+| TC2 | STRATA-NumpyBLAS | NumPy BLAS matmul | CPU |
+| TC3 | STRATA-GraphBLAS | GrB_mxm + complement mask | CPU |
 | BG1 | GPU-PerSrc-BFS | CUDA block-per-source BFS | GPU |
 | BG2 | DAWN-SOVM | CUDA frontier-driven BFS (DAWN ICS 2024) | GPU |
-| TG1 | D-STORM-DAWNiBFS | Bitwise frontier sharing (DAWN + iBFS SIGMOD 2016) | GPU |
-| TG2 | D-STORM-CUDA | CUDA CSR direct expand (guard+CAS) | GPU |
+| TG1 | STRATA-DAWNiBFS | Bitwise frontier sharing (DAWN + iBFS SIGMOD 2016) | GPU |
+| TG2 | STRATA-CUDA | CUDA CSR direct expand (guard+CAS) | GPU |
 
-**Removed:** GPU-Fused, GPU-Sparse (cuSPARSE), D-STORM-cuBLAS (O(n³)). Do not re-add.
+**Removed:** GPU-Fused, GPU-Sparse (cuSPARSE), STRATA-cuBLAS (O(n³)). Do not re-add.
 
 ## Key Dependencies
 
@@ -65,7 +65,7 @@ Python 3.14+, numpy, scipy, networkx, tqdm. Optional: cupy-cuda12x (GPU), suites
 ## Key Conventions
 
 - Distance matrix D: always dense int32. No sparse/float.
-- D-STORM naming: D-STORM-{kernel}. External techniques credited in name (e.g., DAWNiBFS).
+- STRATA naming: STRATA-{kernel}. External techniques credited in name (e.g., DAWNiBFS).
 - Commits: no Co-Authored-By trailer.
 - Reports: CPU results first, GPU second.
 - Benchmark protocol: 3 runs min, GPU 1 warmup, all methods correctness-verified.

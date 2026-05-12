@@ -49,8 +49,8 @@ METHODS = [
     ('BCM2', 'SciPy',              'BCM2_SciPy.apsp',           False),
     ('BCM3', 'I-AORM',             'BCM3_IAORM.apsp',           False),
     ('BCM4', 'M-AORM',             'BCM4_MAORM.apsp',           False),
-    ('TCM1', 'D-STORM-SpMM',       'TCM1_DSTORM_SpMM.apsp',    False),
-    ('TCM2', 'D-STORM-NumpyBLAS',  'TCM2_DSTORM_NumpyBLAS.apsp', False),
+    ('TCM1', 'STRATA-SpMM',       'TCM1_STRATA_SpMM.apsp',    False),
+    ('TCM2', 'STRATA-NumpyBLAS',  'TCM2_STRATA_NumpyBLAS.apsp', False),
 ]
 
 

@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>D-STORM — Dynamic Sparse Topology-Aware Optimal Reachability Matrix</title>
+<title>STRATA — STratified Reachability And Topology Algebra</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header>
-  <h1>D-STORM</h1>
+  <h1>STRATA</h1>
   <div class="subtitle">Small World, Small Efforts</div>
-  <div class="subtitle">Dynamic Sparse Topology-Aware Optimal Reachability Matrix</div>
+  <div class="subtitle">STratified Reachability And Topology Algebra</div>
   <div class="authors">Young-Min Kang (Tongmyong University) &amp; Sung-Soo Kim (ETRI)</div>
 </header>
 
@@ -22,7 +22,7 @@
   <a href="#scaling">Scaling</a>
   <a href="#brandes">Brandes</a>
   <a href="#dynamic">Dynamic</a>
-  <a href="#contributions">D-STORM</a>
+  <a href="#contributions">STRATA</a>
   <a href="#discussion">Discussion</a>
   <a href="#links">Links</a>
   <a href="howto.html">How to Run</a>
@@ -35,22 +35,22 @@
 <section id="overview">
 <h2>Overview</h2>
 
-<p>D-STORM (<strong>D</strong>ynamic <strong>S</strong>parse <strong>T</strong>opology-aware <strong>O</strong>ptimal <strong>R</strong>eachability <strong>M</strong>atrix) is a framework for all-pairs shortest path (APSP) computation. It extends the <a href="https://ieeexplore.ieee.org/document/9424548" target="_blank">AORM framework</a> (IEEE Access, 2021) with sparse matrix redesign, Cython fused pruning, CUDA GPU acceleration with a custom guard+CAS kernel, and comprehensive benchmarking across 12 methods and 6 graph topologies.</p>
+<p>STRATA (<strong>D</strong>ynamic <strong>S</strong>parse <strong>T</strong>opology-aware <strong>O</strong>ptimal <strong>R</strong>eachability <strong>M</strong>atrix) is a framework for all-pairs shortest path (APSP) computation. It extends the <a href="https://ieeexplore.ieee.org/document/9424548" target="_blank">AORM framework</a> (IEEE Access, 2021) with sparse matrix redesign, Cython fused pruning, CUDA GPU acceleration with a custom guard+CAS kernel, and comprehensive benchmarking across 12 methods and 6 graph topologies.</p>
 
 <div class="card">
 <h3>Key Results (Facebook, n=4,039)</h3>
 <ul>
   <li><strong>GPU-PerSrc-BFS (BG1):</strong> 0.017s &mdash; <strong>122&times;</strong> over SciPy, <strong>920&times;</strong> over NetworkX</li>
   <li><strong>DAWN-SOVM (BG2):</strong> 0.019s &mdash; frontier-driven BFS (DAWN, ICS 2024)</li>
-  <li><strong>D-STORM-CUDA (TG2):</strong> 0.031s &mdash; <strong>67&times;</strong> over SciPy (guard+CAS kernel)</li>
-  <li><strong>D-STORM-SpMM-Cython (TC1):</strong> 1.013s &mdash; <strong>2.0&times;</strong> over SciPy (CPU best)</li>
+  <li><strong>STRATA-CUDA (TG2):</strong> 0.031s &mdash; <strong>67&times;</strong> over SciPy (guard+CAS kernel)</li>
+  <li><strong>STRATA-SpMM-Cython (TC1):</strong> 1.013s &mdash; <strong>2.0&times;</strong> over SciPy (CPU best)</li>
   <li>All 12 methods produce <strong>identical</strong> distance matrices (verified element-wise)</li>
 </ul>
 </div>
 
 <div class="card">
-<h3>Why D-STORM?</h3>
-<p>Real-world networks are overwhelmingly <em>small-world</em>: Facebook's 721 million users are connected by an average distance of just 4.74 hops. D-STORM provides the fastest matrix-algebraic APSP on CPU (2.0&times; over SciPy C BFS) and competitive GPU methods, while uniquely supporting k-hop constrained queries, dynamic edge insertion/deletion, simultaneous shortest-path count (&sigma;) computation, and matrix-algebraic Betweenness Centrality (Matrix Brandes).</p>
+<h3>Why STRATA?</h3>
+<p>Real-world networks are overwhelmingly <em>small-world</em>: Facebook's 721 million users are connected by an average distance of just 4.74 hops. STRATA provides the fastest matrix-algebraic APSP on CPU (2.0&times; over SciPy C BFS) and competitive GPU methods, while uniquely supporting k-hop constrained queries, dynamic edge insertion/deletion, simultaneous shortest-path count (&sigma;) computation, and matrix-algebraic Betweenness Centrality (Matrix Brandes).</p>
 </div>
 </section>
 
@@ -58,10 +58,10 @@
 <section id="algorithm">
 <h2>Algorithm</h2>
 
-<p>D-STORM preserves AORM's iterative reachability framework while introducing five structural changes:</p>
+<p>STRATA preserves AORM's iterative reachability framework while introducing five structural changes:</p>
 
 <table>
-  <tr><th>ID</th><th>AORM</th><th>D-STORM</th><th>Effect</th></tr>
+  <tr><th>ID</th><th>AORM</th><th>STRATA</th><th>Effect</th></tr>
   <tr><td>C1</td><td>Dense matmul O(n&sup3;)</td><td>Sparse SpMM O(nnz&middot;c&#772;)</td><td>Sparse graph acceleration</td></tr>
   <tr><td>C2</td><td>Fixed O(n&sup2;)/iter</td><td>nnz-proportional cost</td><td>Progressive sparsity</td></tr>
   <tr><td>C3</td><td>Pre-prune check O(n&sup2;)</td><td>Post-prune nnz=0, O(1)</td><td>Correct + fast</td></tr>
@@ -69,7 +69,7 @@
   <tr><td>C5</td><td>Sparse F add O(n&sup2;)</td><td>Dense bool F, O(1)/entry</td><td>Footprint acceleration</td></tr>
 </table>
 
-<p>The Cython C-extension (<code>_storm_core.pyx</code>) fuses pruning, convergence checking, and footprint update into a single C loop.</p>
+<p>The Cython C-extension (<code>_strata_core.pyx</code>) fuses pruning, convergence checking, and footprint update into a single C loop.</p>
 </section>
 
 <!-- ========== Results ========== -->
@@ -83,16 +83,16 @@
   <tr><th>#</th><th>Method</th><th>ID</th><th>Time (s)</th><th>vs SciPy</th><th>Category</th></tr>
   <tr style="background:#fef9e7"><td>1</td><td><strong>GPU-PerSrc-BFS</strong></td><td>BG1</td><td><strong>0.017</strong></td><td class="highlight">122&times;</td><td>Baseline</td></tr>
   <tr style="background:#fef9e7"><td>2</td><td><strong>DAWN-SOVM</strong></td><td>BG2</td><td>0.019</td><td class="highlight">109&times;</td><td>Baseline</td></tr>
-  <tr style="background:#fef9e7"><td>3</td><td><strong>D-STORM-CUDA</strong></td><td>TG2</td><td>0.031</td><td class="highlight">67&times;</td><td>D-STORM</td></tr>
-  <tr style="background:#f0e6f6"><td>4</td><td>D-STORM-DAWNiBFS</td><td>TG1</td><td>0.267</td><td>7.8&times;</td><td>D-STORM</td></tr>
+  <tr style="background:#fef9e7"><td>3</td><td><strong>STRATA-CUDA</strong></td><td>TG2</td><td>0.031</td><td class="highlight">67&times;</td><td>STRATA</td></tr>
+  <tr style="background:#f0e6f6"><td>4</td><td>STRATA-DAWNiBFS</td><td>TG1</td><td>0.267</td><td>7.8&times;</td><td>STRATA</td></tr>
 </table>
 
 <h3>Facebook Social Network (n=4,039) &mdash; CPU Methods</h3>
 <table>
   <tr><th>#</th><th>Method</th><th>ID</th><th>Time (s)</th><th>vs SciPy</th><th>Category</th></tr>
-  <tr style="background:#e8f0fe"><td>1</td><td><strong>D-STORM-SpMM-Cython</strong></td><td>TC1</td><td><strong>1.013</strong></td><td class="highlight">2.0&times;</td><td>D-STORM</td></tr>
-  <tr><td>2</td><td>D-STORM-NumpyBLAS</td><td>TC2</td><td>1.692</td><td>1.2&times;</td><td>D-STORM</td></tr>
-  <tr><td>3</td><td>D-STORM-GraphBLAS</td><td>TC3</td><td>1.897</td><td>1.1&times;</td><td>D-STORM</td></tr>
+  <tr style="background:#e8f0fe"><td>1</td><td><strong>STRATA-SpMM-Cython</strong></td><td>TC1</td><td><strong>1.013</strong></td><td class="highlight">2.0&times;</td><td>STRATA</td></tr>
+  <tr><td>2</td><td>STRATA-NumpyBLAS</td><td>TC2</td><td>1.692</td><td>1.2&times;</td><td>STRATA</td></tr>
+  <tr><td>3</td><td>STRATA-GraphBLAS</td><td>TC3</td><td>1.897</td><td>1.1&times;</td><td>STRATA</td></tr>
   <tr><td>4</td><td>SciPy (C BFS)</td><td>BC2</td><td>2.072</td><td>1.0&times;</td><td>Baseline</td></tr>
   <tr><td>5</td><td>M-AORM</td><td>BC4</td><td>2.854</td><td>0.7&times;</td><td>Baseline</td></tr>
   <tr><td>6</td><td>GB-bfs</td><td>BC5</td><td>4.194</td><td>0.5&times;</td><td>Baseline</td></tr>
@@ -103,7 +103,7 @@
 <h3>Performance Tiers</h3>
 <div class="card">
 <pre style="background:transparent;color:var(--text);padding:0.5rem;margin:0;font-size:0.95rem">Tier 1  BG1/BG2/TG2  (0.003&ndash;0.031s)  GPU per-source BFS / CUDA direct expand
-Tier 2  TG1          (0.006&ndash;0.267s)  GPU DAWNiBFS bit-compressed D-STORM
+Tier 2  TG1          (0.006&ndash;0.267s)  GPU DAWNiBFS bit-compressed STRATA
 Tier 3  TC1/BC2      (0.16&ndash;2.07s)   CPU SpMM+Cython / C BFS
 Tier 4  TC2/TC3      (0.31&ndash;3.64s)   CPU dense BLAS / GraphBLAS
 Tier 5  BC1&ndash;BC5      (0.40&ndash;15.9s)   Python BFS / edge-wise / GraphBLAS BFS</pre>
@@ -116,35 +116,35 @@ Tier 5  BC1&ndash;BC5      (0.40&ndash;15.9s)   Python BFS / edge-wise / GraphBL
   <tr><th>Method</th><th>Facebook</th><th>BA (d=5)</th><th>WS (d=8)</th><th>ER (d=6)</th><th>Grid (d=88)</th><th>PLC (d=5)</th></tr>
   <tr style="background:#fef9e7"><td><strong>BG1</strong> GPU-PerSrc-BFS</td><td><strong>0.017</strong></td><td>0.003</td><td>0.003</td><td>0.006</td><td><strong>0.003</strong></td><td>0.003</td></tr>
   <tr style="background:#fef9e7"><td><strong>BG2</strong> DAWN-SOVM</td><td>0.019</td><td>0.003</td><td>0.003</td><td>0.006</td><td>0.003</td><td>0.003</td></tr>
-  <tr style="background:#fef9e7"><td><strong>TG2</strong> D-STORM-CUDA</td><td>0.031</td><td><strong>0.006</strong></td><td><strong>0.005</strong></td><td>0.031</td><td>0.014</td><td><strong>0.005</strong></td></tr>
-  <tr style="background:#f0e6f6"><td>TG1 D-STORM-DAWNiBFS</td><td>0.267</td><td>0.017</td><td>0.006</td><td>0.009</td><td>0.026</td><td>0.017</td></tr>
+  <tr style="background:#fef9e7"><td><strong>TG2</strong> STRATA-CUDA</td><td>0.031</td><td><strong>0.006</strong></td><td><strong>0.005</strong></td><td>0.031</td><td>0.014</td><td><strong>0.005</strong></td></tr>
+  <tr style="background:#f0e6f6"><td>TG1 STRATA-DAWNiBFS</td><td>0.267</td><td>0.017</td><td>0.006</td><td>0.009</td><td>0.026</td><td>0.017</td></tr>
 </table>
 
 <h4>CPU Methods</h4>
 <table>
   <tr><th>Method</th><th>Facebook</th><th>BA (d=5)</th><th>WS (d=8)</th><th>ER (d=6)</th><th>Grid (d=88)</th><th>PLC (d=5)</th></tr>
-  <tr style="background:#e8f0fe"><td><strong>TC1</strong> D-STORM-SpMM-Cython</td><td><strong>1.013</strong></td><td><strong>0.287</strong></td><td><strong>0.306</strong></td><td><strong>0.313</strong></td><td><strong>0.159</strong></td><td><strong>0.306</strong></td></tr>
-  <tr><td>TC2 D-STORM-NumpyBLAS</td><td>1.692</td><td>0.306</td><td>0.517</td><td>0.359</td><td>3.643</td><td>0.336</td></tr>
-  <tr><td>TC3 D-STORM-GraphBLAS</td><td>1.897</td><td>0.464</td><td>0.483</td><td>0.484</td><td>0.589</td><td>0.479</td></tr>
+  <tr style="background:#e8f0fe"><td><strong>TC1</strong> STRATA-SpMM-Cython</td><td><strong>1.013</strong></td><td><strong>0.287</strong></td><td><strong>0.306</strong></td><td><strong>0.313</strong></td><td><strong>0.159</strong></td><td><strong>0.306</strong></td></tr>
+  <tr><td>TC2 STRATA-NumpyBLAS</td><td>1.692</td><td>0.306</td><td>0.517</td><td>0.359</td><td>3.643</td><td>0.336</td></tr>
+  <tr><td>TC3 STRATA-GraphBLAS</td><td>1.897</td><td>0.464</td><td>0.483</td><td>0.484</td><td>0.589</td><td>0.479</td></tr>
   <tr><td>BC2 SciPy</td><td>2.072</td><td>0.314</td><td>0.301</td><td>0.331</td><td>0.164</td><td>0.330</td></tr>
   <tr><td>BC4 M-AORM</td><td>2.854</td><td>0.422</td><td>0.672</td><td>0.483</td><td>5.627</td><td>0.424</td></tr>
   <tr><td>BC5 GB-bfs</td><td>4.194</td><td>1.179</td><td>1.355</td><td>1.173</td><td>3.636</td><td>1.177</td></tr>
   <tr><td>BC3 I-AORM</td><td>8.137</td><td>0.403</td><td>0.546</td><td>0.442</td><td>4.310</td><td>0.411</td></tr>
   <tr><td>BC1 NetworkX</td><td>15.934</td><td>1.222</td><td>1.259</td><td>1.421</td><td>1.034</td><td>1.245</td></tr>
 </table>
-<p>TC1 (D-STORM-SpMM-Cython) is <strong>CPU-fastest on all 6 graphs</strong>, including Grid (d=88) where it beats SciPy by 1.0&times;.</p>
+<p>TC1 (STRATA-SpMM-Cython) is <strong>CPU-fastest on all 6 graphs</strong>, including Grid (d=88) where it beats SciPy by 1.0&times;.</p>
 
 <h3>Grand Summary (6 Graphs Total)</h3>
 <table>
   <tr><th>#</th><th>ID</th><th>Method</th><th>Total (s)</th><th>Mean (s)</th></tr>
   <tr style="background:#fef9e7"><td>1</td><td>BG1</td><td><strong>GPU-PerSrc-BFS</strong></td><td><strong>0.035</strong></td><td>0.006</td></tr>
   <tr style="background:#fef9e7"><td>2</td><td>BG2</td><td><strong>DAWN-SOVM</strong></td><td>0.037</td><td>0.006</td></tr>
-  <tr style="background:#fef9e7"><td>3</td><td>TG2</td><td><strong>D-STORM-CUDA</strong></td><td>0.092</td><td>0.015</td></tr>
-  <tr style="background:#f0e6f6"><td>4</td><td>TG1</td><td>D-STORM-DAWNiBFS</td><td>0.341</td><td>0.057</td></tr>
-  <tr style="background:#e8f0fe"><td>5</td><td>TC1</td><td><strong>D-STORM-SpMM-Cython</strong></td><td>2.384</td><td>0.397</td></tr>
+  <tr style="background:#fef9e7"><td>3</td><td>TG2</td><td><strong>STRATA-CUDA</strong></td><td>0.092</td><td>0.015</td></tr>
+  <tr style="background:#f0e6f6"><td>4</td><td>TG1</td><td>STRATA-DAWNiBFS</td><td>0.341</td><td>0.057</td></tr>
+  <tr style="background:#e8f0fe"><td>5</td><td>TC1</td><td><strong>STRATA-SpMM-Cython</strong></td><td>2.384</td><td>0.397</td></tr>
   <tr><td>6</td><td>BC2</td><td>SciPy</td><td>3.512</td><td>0.585</td></tr>
-  <tr><td>7</td><td>TC3</td><td>D-STORM-GraphBLAS</td><td>4.396</td><td>0.733</td></tr>
-  <tr><td>8</td><td>TC2</td><td>D-STORM-NumpyBLAS</td><td>6.854</td><td>1.142</td></tr>
+  <tr><td>7</td><td>TC3</td><td>STRATA-GraphBLAS</td><td>4.396</td><td>0.733</td></tr>
+  <tr><td>8</td><td>TC2</td><td>STRATA-NumpyBLAS</td><td>6.854</td><td>1.142</td></tr>
   <tr><td>9</td><td>BC4</td><td>M-AORM</td><td>10.482</td><td>1.747</td></tr>
   <tr><td>10</td><td>BC5</td><td>GB-bfs</td><td>12.714</td><td>2.119</td></tr>
   <tr><td>11</td><td>BC3</td><td>I-AORM</td><td>14.249</td><td>2.375</td></tr>
@@ -177,19 +177,19 @@ Tier 5  BC1&ndash;BC5      (0.40&ndash;15.9s)   Python BFS / edge-wise / GraphBL
   <li><strong>TG2 Memory Cliff:</strong> At n=20,000, TG2 explodes to 12.8s. Its dense buffers require 16n&sup2; = 6.4GB, exceeding GPU VRAM capacity and causing massive swap overhead.</li>
   <li><strong>TG1 Stable Scaling:</strong> Bit-compression reduces memory to 4.25n&sup2; (75% reduction). Runs at 0.805s at n=20,000 &mdash; stable and predictable.</li>
   <li><strong>BG1/BG2 Dominance:</strong> 4n&sup2; memory, single kernel launch per source &mdash; consistently fastest across all scales.</li>
-  <li><strong>TG1 vs BG1:</strong> 2.7&times; gap at n=20K reflects D-STORM's structural overhead (per-hop sync, atomicOr, batch management).</li>
+  <li><strong>TG1 vs BG1:</strong> 2.7&times; gap at n=20K reflects STRATA's structural overhead (per-hop sync, atomicOr, batch management).</li>
 </ul>
 </div>
 
 <div class="card">
-<h3>D-STORM GPU Optimization Path (BA n=20,000)</h3>
+<h3>STRATA GPU Optimization Path (BA n=20,000)</h3>
 <table>
   <tr><th>Step</th><th>Time (s)</th><th>Improvement</th></tr>
-  <tr><td>TG2 D-STORM-CUDA (memory cliff)</td><td>12.784</td><td>1.0&times;</td></tr>
-  <tr><td>TG1 D-STORM-DAWNiBFS (bit-compress)</td><td>0.805</td><td>15.9&times;</td></tr>
+  <tr><td>TG2 STRATA-CUDA (memory cliff)</td><td>12.784</td><td>1.0&times;</td></tr>
+  <tr><td>TG1 STRATA-DAWNiBFS (bit-compress)</td><td>0.805</td><td>15.9&times;</td></tr>
   <tr><td>BG1 GPU-PerSrc-BFS (remove framework)</td><td><strong>0.263</strong></td><td><strong>48.6&times;</strong></td></tr>
 </table>
-<p>At Facebook scale (n=4,039), TG2 (0.031s) beats TG1 (0.267s). But at n=20,000, TG2 hits the memory cliff (12.8s) while TG1 remains stable (0.81s). This confirms that D-STORM's dense buffers impose a scaling ceiling that bit-compression or framework removal can overcome.</p>
+<p>At Facebook scale (n=4,039), TG2 (0.031s) beats TG1 (0.267s). But at n=20,000, TG2 hits the memory cliff (12.8s) while TG1 remains stable (0.81s). This confirms that STRATA's dense buffers impose a scaling ceiling that bit-compression or framework removal can overcome.</p>
 </div>
 </section>
 
@@ -199,22 +199,22 @@ Tier 5  BC1&ndash;BC5      (0.40&ndash;15.9s)   Python BFS / edge-wise / GraphBL
 
 <div class="card">
 <h3>Discovery: Matrix Multiply Encodes &sigma;(s,t)</h3>
-<p>In D-STORM's matrix product A &middot; C<sup>(k-1)</sup>, the integer values <strong>before Heaviside binarization</strong> exactly encode the number of shortest paths &sigma;(s,t). This follows from the Brandes (2001) recurrence:</p>
+<p>In STRATA's matrix product A &middot; C<sup>(k-1)</sup>, the integer values <strong>before Heaviside binarization</strong> exactly encode the number of shortest paths &sigma;(s,t). This follows from the Brandes (2001) recurrence:</p>
 <pre><code>&sigma;(i,j) = &sum; { &sigma;(u,j) : u &isin; N(i) &and; d(u,j) = d(i,j) - 1 }</code></pre>
-<p>D-STORM's frontier pruning (F mask) ensures that only newly discovered pairs retain values, which is exactly "count shortest paths only." By simply <strong>removing the Heaviside step</strong>, D-STORM simultaneously computes both D (distances) and &sigma; (shortest-path counts) in a single forward pass.</p>
+<p>STRATA's frontier pruning (F mask) ensures that only newly discovered pairs retain values, which is exactly "count shortest paths only." By simply <strong>removing the Heaviside step</strong>, STRATA simultaneously computes both D (distances) and &sigma; (shortest-path counts) in a single forward pass.</p>
 </div>
 
 <div class="card">
-<h3>&sigma;(s,t) Computation: D-STORM vs BFS</h3>
+<h3>&sigma;(s,t) Computation: STRATA vs BFS</h3>
 <table>
-  <tr><th>Graph</th><th>n</th><th>d</th><th>D-STORM</th><th>BFS (Brandes)</th><th>Speedup</th></tr>
+  <tr><th>Graph</th><th>n</th><th>d</th><th>STRATA</th><th>BFS (Brandes)</th><th>Speedup</th></tr>
   <tr><td>Facebook</td><td>4,039</td><td>8</td><td><strong>4.53s</strong></td><td>155.2s</td><td class="highlight">34.2&times;</td></tr>
   <tr><td>BA-2000</td><td>2,000</td><td>5</td><td><strong>0.49s</strong></td><td>10.0s</td><td class="highlight">20.3&times;</td></tr>
   <tr><td>WS-2000</td><td>2,000</td><td>8</td><td><strong>0.73s</strong></td><td>6.2s</td><td class="highlight">8.5&times;</td></tr>
   <tr><td>ER-2000</td><td>2,000</td><td>6</td><td><strong>0.58s</strong></td><td>10.0s</td><td class="highlight">17.2&times;</td></tr>
   <tr><td>PLC-2000</td><td>2,000</td><td>5</td><td><strong>0.49s</strong></td><td>10.0s</td><td class="highlight">20.3&times;</td></tr>
 </table>
-<p>D-STORM &sigma; and BFS &sigma; are <strong>exactly identical</strong> on all graphs (np.allclose verified). The 8.5&ndash;34&times; speedup comes from replacing n Python loops with d BLAS calls &mdash; same O(nm) complexity, better work organization.</p>
+<p>STRATA &sigma; and BFS &sigma; are <strong>exactly identical</strong> on all graphs (np.allclose verified). The 8.5&ndash;34&times; speedup comes from replacing n Python loops with d BLAS calls &mdash; same O(nm) complexity, better work organization.</p>
 </div>
 
 <div class="card">
@@ -226,8 +226,8 @@ Tier 5  BC1&ndash;BC5      (0.40&ndash;15.9s)   Python BFS / edge-wise / GraphBL
   <tr><th>ID</th><th>Method</th><th>Kernel</th></tr>
   <tr><td>BB1</td><td>Brandes-Python</td><td>Pure Python per-source BFS</td></tr>
   <tr><td>BB2</td><td>Brandes-C (igraph)</td><td>igraph C single-thread</td></tr>
-  <tr><td>TB1</td><td>Matrix-Brandes (D-STORM)</td><td>SpMM + Numba JIT fused prune</td></tr>
-  <tr><td>TB2</td><td>Matrix-Brandes-C (D-STORM)</td><td>C + OpenMP fused SpMM</td></tr>
+  <tr><td>TB1</td><td>Matrix-Brandes (STRATA)</td><td>SpMM + Numba JIT fused prune</td></tr>
+  <tr><td>TB2</td><td>Matrix-Brandes-C (STRATA)</td><td>C + OpenMP fused SpMM</td></tr>
 </table>
 
 <h4>Betweenness Centrality Performance</h4>
@@ -247,7 +247,7 @@ Tier 5  BC1&ndash;BC5      (0.40&ndash;15.9s)   Python BFS / edge-wise / GraphBL
 <section id="dynamic">
 <h2>Dynamic Edge Operations</h2>
 
-<p>D-STORM's distance matrix D enables incremental updates for both edge insertion and deletion, without full APSP recomputation. These operations work with <strong>any APSP method</strong> that produces a complete distance matrix.</p>
+<p>STRATA's distance matrix D enables incremental updates for both edge insertion and deletion, without full APSP recomputation. These operations work with <strong>any APSP method</strong> that produces a complete distance matrix.</p>
 
 <div class="card">
 <h3>Edge Insertion: O(n&sup2;) Closed-Form Update</h3>
@@ -290,17 +290,17 @@ Tier 5  BC1&ndash;BC5      (0.40&ndash;15.9s)   Python BFS / edge-wise / GraphBL
   <li><strong>Deletion:</strong> Level-based parent replacement with early termination</li>
   <li><strong>Method-agnostic:</strong> Works with any APSP method that produces D and A</li>
 </ul>
-<p>Related work: Even&ndash;Shiloach (1981) handles single-source decremental in O(m&middot;n). Ramalingam&ndash;Reps (1996) updates affected vertices only. Demetrescu&ndash;Italiano (2004) achieves amortized O(n&sup2; log&sup3; n) fully dynamic APSP. D-STORM's framework is orthogonal to these &mdash; it operates on the distance matrix level, independent of the APSP method used.</p>
+<p>Related work: Even&ndash;Shiloach (1981) handles single-source decremental in O(m&middot;n). Ramalingam&ndash;Reps (1996) updates affected vertices only. Demetrescu&ndash;Italiano (2004) achieves amortized O(n&sup2; log&sup3; n) fully dynamic APSP. STRATA's framework is orthogonal to these &mdash; it operates on the distance matrix level, independent of the APSP method used.</p>
 </div>
 </section>
 
-<!-- ========== D-STORM Contributions ========== -->
+<!-- ========== STRATA Contributions ========== -->
 <section id="contributions">
-<h2>D-STORM Contributions</h2>
+<h2>STRATA Contributions</h2>
 
 <div class="card">
 <h3>1. CPU: Fastest Matrix-Algebraic APSP</h3>
-<p>D-STORM-SpMM-Cython (TC1) is the <strong>fastest CPU method across all 6 graph topologies</strong>, outperforming SciPy's native C BFS by up to 2.0&times;. The key is Cython fused pruning &mdash; collapsing three sparse operations (booleanize &rarr; prune &rarr; footprint update) into a single C pass over COO entries.</p>
+<p>STRATA-SpMM-Cython (TC1) is the <strong>fastest CPU method across all 6 graph topologies</strong>, outperforming SciPy's native C BFS by up to 2.0&times;. The key is Cython fused pruning &mdash; collapsing three sparse operations (booleanize &rarr; prune &rarr; footprint update) into a single C pass over COO entries.</p>
 <table>
   <tr><th>Graph</th><th>TC1 (s)</th><th>SciPy (s)</th><th>Speedup</th></tr>
   <tr><td>Facebook (n=4,039)</td><td><strong>1.013</strong></td><td>2.072</td><td class="highlight">2.0&times;</td></tr>
@@ -312,7 +312,7 @@ Tier 5  BC1&ndash;BC5      (0.40&ndash;15.9s)   Python BFS / edge-wise / GraphBL
 
 <div class="card">
 <h3>2. GPU: SpMM Elimination via Direct CSR Expansion</h3>
-<p>D-STORM-CUDA (TG2) replaces cuSPARSE SpMM with a custom CUDA kernel that directly traverses CSR neighbors, eliminating three SpMM bottlenecks:</p>
+<p>STRATA-CUDA (TG2) replaces cuSPARSE SpMM with a custom CUDA kernel that directly traverses CSR neighbors, eliminating three SpMM bottlenecks:</p>
 <ol>
   <li><strong>Redundant products</strong> &mdash; SpMM computes all matrix products including already-visited pairs</li>
   <li><strong>Intermediate matrices</strong> &mdash; SpMM output requires COO/CSR conversion overhead</li>
@@ -330,12 +330,12 @@ Tier 5  BC1&ndash;BC5      (0.40&ndash;15.9s)   Python BFS / edge-wise / GraphBL
 
 <div class="card">
 <h3>3. Structural Insight: Optimization Converges to Per-Source BFS</h3>
-<p>Progressive removal of D-STORM's matrix-algebraic overhead converges to per-source BFS. At small scale (n=4K), TG2 is competitive. At large scale (n=20K), the framework overhead dominates, and BG1 wins by 48.6&times;. This reveals that for <em>full APSP</em>, matrix-algebraic indirection costs (shared footprint &rarr; atomics, per-hop kernel launch) accumulate at scale.</p>
+<p>Progressive removal of STRATA's matrix-algebraic overhead converges to per-source BFS. At small scale (n=4K), TG2 is competitive. At large scale (n=20K), the framework overhead dominates, and BG1 wins by 48.6&times;. This reveals that for <em>full APSP</em>, matrix-algebraic indirection costs (shared footprint &rarr; atomics, per-hop kernel launch) accumulate at scale.</p>
 </div>
 
 <div class="card">
-<h3>4. D-STORM's Unique Capabilities</h3>
-<p>While BG1 is fastest for full APSP, D-STORM provides capabilities that per-source BFS cannot:</p>
+<h3>4. STRATA's Unique Capabilities</h3>
+<p>While BG1 is fastest for full APSP, STRATA provides capabilities that per-source BFS cannot:</p>
 <ul>
   <li><strong>k-hop constrained APSP</strong> &mdash; exact hop shells at each distance level</li>
   <li><strong>&sigma;(s,t) simultaneous computation</strong> &mdash; shortest-path counts from the same matrix multiply, 8.5&ndash;34&times; over sequential BFS</li>
@@ -355,20 +355,20 @@ Tier 5  BC1&ndash;BC5      (0.40&ndash;15.9s)   Python BFS / edge-wise / GraphBL
 <h3>Algorithm Selection Guide</h3>
 <table>
   <tr><th>Scenario</th><th>Best (GPU)</th><th>Best (CPU only)</th></tr>
-  <tr><td>Small-world APSP (n &lt; 4K)</td><td>TG2 D-STORM-CUDA</td><td><strong>TC1 D-STORM-SpMM-Cython</strong></td></tr>
+  <tr><td>Small-world APSP (n &lt; 4K)</td><td>TG2 STRATA-CUDA</td><td><strong>TC1 STRATA-SpMM-Cython</strong></td></tr>
   <tr><td>Large-scale APSP (n &gt; 4K)</td><td><strong>BG1 GPU-PerSrc-BFS</strong></td><td>BC2 SciPy</td></tr>
   <tr><td>High diameter APSP (d &gt; 20)</td><td><strong>BG1 GPU-PerSrc-BFS</strong></td><td>TC1 / BC2</td></tr>
-  <tr><td>k-hop query</td><td>TG2</td><td><strong>TC1 D-STORM</strong></td></tr>
+  <tr><td>k-hop query</td><td>TG2</td><td><strong>TC1 STRATA</strong></td></tr>
   <tr><td>Betweenness Centrality</td><td colspan="2"><strong>TB2 Matrix-Brandes-C</strong> (2.4&ndash;3.6&times; over igraph)</td></tr>
-  <tr><td>Dynamic edge insertion</td><td colspan="2"><strong>D-STORM</strong> (22&ndash;33&times; vs recompute)</td></tr>
+  <tr><td>Dynamic edge insertion</td><td colspan="2"><strong>STRATA</strong> (22&ndash;33&times; vs recompute)</td></tr>
   <tr><td>Dynamic edge deletion</td><td colspan="2"><strong>DLevel</strong> (130&times; optimized, early termination)</td></tr>
 </table>
 </div>
 
 <div class="card">
 <h3>Honest Assessment</h3>
-<p>D-STORM's APSP performance on GPU cannot beat per-source BFS at scale. The matrix-algebraic framework introduces structural overhead (per-hop sync, atomics, batch management) that becomes dominant as n grows. TG2's memory cliff at n=20K is a hard scaling limit.</p>
-<p>However, D-STORM's real value lies in its <strong>algebraic generality</strong>: the same matrix multiply that computes distances also yields &sigma;(s,t), enabling Matrix Brandes (TB2) to outperform igraph C by 2.4&ndash;3.6&times;. The framework also naturally supports dynamic updates and k-hop queries &mdash; capabilities absent from per-source BFS.</p>
+<p>STRATA's APSP performance on GPU cannot beat per-source BFS at scale. The matrix-algebraic framework introduces structural overhead (per-hop sync, atomics, batch management) that becomes dominant as n grows. TG2's memory cliff at n=20K is a hard scaling limit.</p>
+<p>However, STRATA's real value lies in its <strong>algebraic generality</strong>: the same matrix multiply that computes distances also yields &sigma;(s,t), enabling Matrix Brandes (TB2) to outperform igraph C by 2.4&ndash;3.6&times;. The framework also naturally supports dynamic updates and k-hop queries &mdash; capabilities absent from per-source BFS.</p>
 </div>
 </section>
 
@@ -382,17 +382,17 @@ Tier 5  BC1&ndash;BC5      (0.40&ndash;15.9s)   Python BFS / edge-wise / GraphBL
     <div class="label">AORM Paper</div>
     <div class="desc">IEEE Access (Open Access)</div>
   </a>
-  <a href="https://github.com/dknife/STORM/tree/main/02_Implementations" target="_blank" class="link-card">
+  <a href="https://github.com/dknife/STRATA/tree/main/02_Implementations" target="_blank" class="link-card">
     <div class="icon">&#128187;</div>
     <div class="label">APSP Implementations</div>
     <div class="desc">12 APSP Methods</div>
   </a>
-  <a href="https://github.com/dknife/STORM/tree/main/02_Implementation_BRANDES" target="_blank" class="link-card">
+  <a href="https://github.com/dknife/STRATA/tree/main/02_Implementation_BRANDES" target="_blank" class="link-card">
     <div class="icon">&#128200;</div>
     <div class="label">Brandes Implementations</div>
     <div class="desc">4 Betweenness Centrality Methods</div>
   </a>
-  <a href="https://github.com/dknife/STORM/tree/main/03_Experiments" target="_blank" class="link-card">
+  <a href="https://github.com/dknife/STRATA/tree/main/03_Experiments" target="_blank" class="link-card">
     <div class="icon">&#128202;</div>
     <div class="label">Experiments</div>
     <div class="desc">12 Methods &times; 6 Graphs + Scaling</div>
@@ -408,8 +408,8 @@ Tier 5  BC1&ndash;BC5      (0.40&ndash;15.9s)   Python BFS / edge-wise / GraphBL
 </div>
 
 <footer>
-  <p>D-STORM Project &copy; 2026 | Young-Min Kang (Tongmyong University) &amp; Sung-Soo Kim (ETRI)</p>
-  <p><a href="https://github.com/dknife/STORM">GitHub Repository</a></p>
+  <p>STRATA Project &copy; 2026 | Young-Min Kang (Tongmyong University) &amp; Sung-Soo Kim (ETRI)</p>
+  <p><a href="https://github.com/dknife/STRATA">GitHub Repository</a></p>
 </footer>
 
 </body>

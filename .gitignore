@@ -5,7 +5,7 @@ __pycache__/
 *.pyd
 *.obj
 build/
-_storm_core.c
+_strata_core.c
 *.lib
 *.exp
 *.aux

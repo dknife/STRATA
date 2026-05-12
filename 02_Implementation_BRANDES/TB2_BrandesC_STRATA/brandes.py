@@ -57,7 +57,7 @@ def run_brandes(A_csr, verbose=True):
 
     n = A_csr.shape[0]
     if verbose:
-        print(f"  TB2 Matrix-Brandes-C (D-STORM): n={n}")
+        print(f"  TB2 Matrix-Brandes-C (STRATA): n={n}")
 
     indptr = np.ascontiguousarray(A_csr.indptr, dtype=np.int32)
     indices = np.ascontiguousarray(A_csr.indices, dtype=np.int32)

@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>D-STORM — How to Run</title>
+<title>STRATA — How to Run</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header>
-  <h1>How to Run D-STORM</h1>
+  <h1>How to Run STRATA</h1>
   <div class="subtitle">Installation and Benchmark Guide</div>
 </header>
 
@@ -28,8 +28,8 @@
 <section id="install">
 <h2>1. Installation</h2>
 <h3>Clone the Repository</h3>
-<pre><code>git clone https://github.com/dknife/STORM.git
-cd STORM</code></pre>
+<pre><code>git clone https://github.com/dknife/STRATA.git
+cd STRATA</code></pre>
 
 <h3>Install Dependencies</h3>
 <pre><code>pip install numpy scipy networkx tqdm</code></pre>
@@ -104,12 +104,12 @@ A, n, m = load_graph('04_Datasets/real-world/facebook_combined.txt',
 A = make_undirected(A)
 
 # Run any method
-from TC1_DSTORM_SpMM_Cython.apsp import run_apsp
+from TC1_STRATA_SpMM_Cython.apsp import run_apsp
 D = run_apsp(A, verbose=True)
 print(f"Distance matrix: {D.shape}, max distance: {D.max()}")
 
 # GPU method
-from TG2_DSTORM_CUDA.apsp import run_apsp as run_gpu
+from TG2_STRATA_CUDA.apsp import run_apsp as run_gpu
 D_gpu = run_gpu(A, verbose=True)</code></pre>
 
 <h3>Available Methods</h3>
@@ -120,12 +120,12 @@ D_gpu = run_gpu(A, verbose=True)</code></pre>
   <tr><td>BC3</td><td><code>BC3_IAORM.apsp</code></td><td>CPU</td></tr>
   <tr><td>BC4</td><td><code>BC4_MAORM.apsp</code></td><td>CPU</td></tr>
   <tr><td>BC5</td><td><code>BC5_GB_bfs.apsp</code></td><td>CPU (GraphBLAS)</td></tr>
-  <tr><td>TC1</td><td><code>TC1_DSTORM_SpMM_Cython.apsp</code></td><td>CPU</td></tr>
-  <tr><td>TC2</td><td><code>TC2_DSTORM_NumpyBLAS.apsp</code></td><td>CPU</td></tr>
-  <tr><td>TC3</td><td><code>TC3_DSTORM_GraphBLAS.apsp</code></td><td>CPU (GraphBLAS)</td></tr>
+  <tr><td>TC1</td><td><code>TC1_STRATA_SpMM_Cython.apsp</code></td><td>CPU</td></tr>
+  <tr><td>TC2</td><td><code>TC2_STRATA_NumpyBLAS.apsp</code></td><td>CPU</td></tr>
+  <tr><td>TC3</td><td><code>TC3_STRATA_GraphBLAS.apsp</code></td><td>CPU (GraphBLAS)</td></tr>
   <tr><td>BG1</td><td><code>BG1_GPU_PerSrc_BFS.apsp</code></td><td>GPU (CUDA)</td></tr>
-  <tr><td>TG1</td><td><code>TG1_DSTORM_cuBLAS.apsp</code></td><td>GPU (cuBLAS)</td></tr>
-  <tr><td>TG2</td><td><code>TG2_DSTORM_CUDA.apsp</code></td><td>GPU (CUDA)</td></tr>
+  <tr><td>TG1</td><td><code>TG1_STRATA_cuBLAS.apsp</code></td><td>GPU (cuBLAS)</td></tr>
+  <tr><td>TG2</td><td><code>TG2_STRATA_CUDA.apsp</code></td><td>GPU (CUDA)</td></tr>
 </table>
 </section>
 
@@ -143,7 +143,7 @@ D_gpu = run_gpu(A, verbose=True)</code></pre>
 </div>
 
 <footer>
-  <p><a href="index.html">&larr; Back to Home</a> | <a href="https://github.com/dknife/STORM">GitHub</a></p>
+  <p><a href="index.html">&larr; Back to Home</a> | <a href="https://github.com/dknife/STRATA">GitHub</a></p>
 </footer>
 
 </body>

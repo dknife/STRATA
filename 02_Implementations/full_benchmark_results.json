@@ -33,12 +33,12 @@
         "check": "PASS"
       },
       "TC1": {
-        "label": "D-STORM-SpMM-Cython",
+        "label": "STRATA-SpMM-Cython",
         "time": 1.0129522001370788,
         "check": "PASS"
       },
       "TC2": {
-        "label": "D-STORM-NumpyBLAS",
+        "label": "STRATA-NumpyBLAS",
         "time": 1.691959900315851,
         "check": "PASS"
       },
@@ -53,12 +53,12 @@
         "check": "PASS"
       },
       "TG1": {
-        "label": "D-STORM-DAWNiBFS",
+        "label": "STRATA-DAWNiBFS",
         "time": 0.26683339988812804,
         "check": "PASS"
       },
       "TG2": {
-        "label": "D-STORM-CUDA",
+        "label": "STRATA-CUDA",
         "time": 0.030737899709492922,
         "check": "PASS"
       }
@@ -98,12 +98,12 @@
         "check": "PASS"
       },
       "TC1": {
-        "label": "D-STORM-SpMM-Cython",
+        "label": "STRATA-SpMM-Cython",
         "time": 0.28668100014328957,
         "check": "PASS"
       },
       "TC2": {
-        "label": "D-STORM-NumpyBLAS",
+        "label": "STRATA-NumpyBLAS",
         "time": 0.30646910006180406,
         "check": "PASS"
       },
@@ -118,12 +118,12 @@
         "check": "PASS"
       },
       "TG1": {
-        "label": "D-STORM-DAWNiBFS",
+        "label": "STRATA-DAWNiBFS",
         "time": 0.017398899886757135,
         "check": "PASS"
       },
       "TG2": {
-        "label": "D-STORM-CUDA",
+        "label": "STRATA-CUDA",
         "time": 0.005793699994683266,
         "check": "PASS"
       }
@@ -163,12 +163,12 @@
         "check": "PASS"
       },
       "TC1": {
-        "label": "D-STORM-SpMM-Cython",
+        "label": "STRATA-SpMM-Cython",
         "time": 0.30569649999961257,
         "check": "PASS"
       },
       "TC2": {
-        "label": "D-STORM-NumpyBLAS",
+        "label": "STRATA-NumpyBLAS",
         "time": 0.5174904000014067,
         "check": "PASS"
       },
@@ -183,12 +183,12 @@
         "check": "PASS"
       },
       "TG1": {
-        "label": "D-STORM-DAWNiBFS",
+        "label": "STRATA-DAWNiBFS",
         "time": 0.005627600010484457,
         "check": "PASS"
       },
       "TG2": {
-        "label": "D-STORM-CUDA",
+        "label": "STRATA-CUDA",
         "time": 0.004722800105810165,
         "check": "PASS"
       }
@@ -228,12 +228,12 @@
         "check": "PASS"
       },
       "TC1": {
-        "label": "D-STORM-SpMM-Cython",
+        "label": "STRATA-SpMM-Cython",
         "time": 0.31297329999506474,
         "check": "PASS"
       },
       "TC2": {
-        "label": "D-STORM-NumpyBLAS",
+        "label": "STRATA-NumpyBLAS",
         "time": 0.35887139989063144,
         "check": "PASS"
       },
@@ -248,12 +248,12 @@
         "check": "PASS"
       },
       "TG1": {
-        "label": "D-STORM-DAWNiBFS",
+        "label": "STRATA-DAWNiBFS",
         "time": 0.008658400271087885,
         "check": "PASS"
       },
       "TG2": {
-        "label": "D-STORM-CUDA",
+        "label": "STRATA-CUDA",
         "time": 0.031369300093501806,
         "check": "PASS"
       }
@@ -293,12 +293,12 @@
         "check": "PASS"
       },
       "TC1": {
-        "label": "D-STORM-SpMM-Cython",
+        "label": "STRATA-SpMM-Cython",
         "time": 0.15946370037272573,
         "check": "PASS"
       },
       "TC2": {
-        "label": "D-STORM-NumpyBLAS",
+        "label": "STRATA-NumpyBLAS",
         "time": 3.643190899863839,
         "check": "PASS"
       },
@@ -313,12 +313,12 @@
         "check": "PASS"
       },
       "TG1": {
-        "label": "D-STORM-DAWNiBFS",
+        "label": "STRATA-DAWNiBFS",
         "time": 0.02580629987642169,
         "check": "PASS"
       },
       "TG2": {
-        "label": "D-STORM-CUDA",
+        "label": "STRATA-CUDA",
         "time": 0.014162099920213223,
         "check": "PASS"
       }
@@ -358,12 +358,12 @@
         "check": "PASS"
       },
       "TC1": {
-        "label": "D-STORM-SpMM-Cython",
+        "label": "STRATA-SpMM-Cython",
         "time": 0.3063169000670314,
         "check": "PASS"
       },
       "TC2": {
-        "label": "D-STORM-NumpyBLAS",
+        "label": "STRATA-NumpyBLAS",
         "time": 0.33649270003661513,
         "check": "PASS"
       },
@@ -378,12 +378,12 @@
         "check": "PASS"
       },
       "TG1": {
-        "label": "D-STORM-DAWNiBFS",
+        "label": "STRATA-DAWNiBFS",
         "time": 0.016536499839276075,
         "check": "PASS"
       },
       "TG2": {
-        "label": "D-STORM-CUDA",
+        "label": "STRATA-CUDA",
         "time": 0.0049902000464499,
         "check": "PASS"
       }

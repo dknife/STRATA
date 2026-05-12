@@ -1,4 +1,4 @@
-"""TCM1: D-STORM-SpMM — SciPy SpMM + NumPy vectorized pruning (Mac).
+"""TCM1: STRATA-SpMM — SciPy SpMM + NumPy vectorized pruning (Mac).
 
 Sparse frontier propagation with cumulative dense footprint.
 Uses NumPy vectorized COO scan for pruning (no Cython on Mac).
@@ -8,7 +8,7 @@ import numpy as np
 import scipy.sparse as sp
 
 
-class SparseStormIterator:
+class SparseStrataIterator:
     """Sparse incremental k-order reachability iterator.
 
     Computes R^(k)* = H(A @ R^(k-1)*) AND NOT F via:
@@ -66,7 +66,7 @@ class SparseStormIterator:
 
 
 def run_apsp(A_csr, k=-1, verbose=True):
-    """APSP via D-STORM sparse (NumPy vectorized pruning, Mac)."""
+    """APSP via STRATA sparse (NumPy vectorized pruning, Mac)."""
     if not sp.issparse(A_csr):
         A_csr = sp.csr_matrix(A_csr)
     A_csr = A_csr.astype(np.float32)
@@ -75,13 +75,13 @@ def run_apsp(A_csr, k=-1, verbose=True):
 
     n = A_csr.shape[0]
     if verbose:
-        print(f"  TCM1 D-STORM-SpMM: n={n}")
+        print(f"  TCM1 STRATA-SpMM: n={n}")
 
     D = np.zeros((n, n), dtype=np.int32)
     A_coo = A_csr.tocoo()
     D[A_coo.row, A_coo.col] = 1
 
-    for Rk_star, power in SparseStormIterator(A_csr, k):
+    for Rk_star, power in SparseStrataIterator(A_csr, k):
         coo = Rk_star.tocoo()
         D[coo.row, coo.col] = power
         if verbose:

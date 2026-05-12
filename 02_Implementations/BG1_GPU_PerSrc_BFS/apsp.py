@@ -4,7 +4,7 @@ True GPU parallelization of SciPy's sequential per-source BFS.
 Each source vertex gets one CUDA thread block; threads within
 the block cooperate on frontier expansion via CSR traversal.
 
-NOT based on D-STORM — pure graph BFS with no matrix algebra.
+NOT based on STRATA — pure graph BFS with no matrix algebra.
 """
 
 import numpy as np

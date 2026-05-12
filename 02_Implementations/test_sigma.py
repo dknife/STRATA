@@ -105,44 +105,44 @@ def main():
         sys.path.insert(0, '.')
 
         # TC1
-        from TC1_DSTORM_SpMM_Cython.apsp import run_apsp as tc1_apsp
+        from TC1_STRATA_SpMM_Cython.apsp import run_apsp as tc1_apsp
         # Test backward compatibility (no sigma)
         D_only = tc1_apsp(A, verbose=False)
         assert np.array_equal(D_only, D_ref), "TC1 D-only mode broken!"
         print("  TC1 backward compat: PASS")
-        if not test_method('TC1 D-STORM-SpMM', tc1_apsp, A, D_ref, sigma_ref):
+        if not test_method('TC1 STRATA-SpMM', tc1_apsp, A, D_ref, sigma_ref):
             all_pass = False
 
         # TC2
-        from TC2_DSTORM_NumpyBLAS.apsp import run_apsp as tc2_apsp
+        from TC2_STRATA_NumpyBLAS.apsp import run_apsp as tc2_apsp
         D_only = tc2_apsp(A, verbose=False)
         assert np.array_equal(D_only, D_ref), "TC2 D-only mode broken!"
         print("  TC2 backward compat: PASS")
-        if not test_method('TC2 D-STORM-Dense', tc2_apsp, A, D_ref, sigma_ref):
+        if not test_method('TC2 STRATA-Dense', tc2_apsp, A, D_ref, sigma_ref):
             all_pass = False
 
         # TG1 (GPU)
         try:
-            from TG1_DSTORM_DAWNiBFS.apsp import run_apsp as tg1_apsp
+            from TG1_STRATA_DAWNiBFS.apsp import run_apsp as tg1_apsp
             D_only = tg1_apsp(A, verbose=False)
             assert np.array_equal(D_only, D_ref), "TG1 D-only mode broken!"
             print("  TG1 backward compat: PASS")
-            if not test_method('TG1 D-STORM-DAWNiBFS', tg1_apsp, A, D_ref, sigma_ref):
+            if not test_method('TG1 STRATA-DAWNiBFS', tg1_apsp, A, D_ref, sigma_ref):
                 all_pass = False
         except ImportError:
-            print("\n--- TG1 D-STORM-DAWNiBFS ---")
+            print("\n--- TG1 STRATA-DAWNiBFS ---")
             print("  SKIP: CuPy not available")
 
         # TG2 (GPU)
         try:
-            from TG2_DSTORM_CUDA.apsp import run_apsp as tg2_apsp
+            from TG2_STRATA_CUDA.apsp import run_apsp as tg2_apsp
             D_only = tg2_apsp(A, verbose=False)
             assert np.array_equal(D_only, D_ref), "TG2 D-only mode broken!"
             print("  TG2 backward compat: PASS")
-            if not test_method('TG2 D-STORM-CUDA', tg2_apsp, A, D_ref, sigma_ref):
+            if not test_method('TG2 STRATA-CUDA', tg2_apsp, A, D_ref, sigma_ref):
                 all_pass = False
         except ImportError:
-            print("\n--- TG2 D-STORM-CUDA ---")
+            print("\n--- TG2 STRATA-CUDA ---")
             print("  SKIP: CuPy not available")
 
     print(f"\n{'='*50}")

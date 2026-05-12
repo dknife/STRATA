@@ -1,7 +1,7 @@
-"""TC2: D-STORM-Dense — NumPy BLAS matmul + Heaviside pruning.
+"""TC2: STRATA-Dense — NumPy BLAS matmul + Heaviside pruning.
 
 Dense frontier propagation using BLAS-accelerated matrix multiply.
-Same D-STORM algebra as TC1 but operating on dense numpy arrays.
+Same STRATA algebra as TC1 but operating on dense numpy arrays.
 
 When compute_sigma=True, preserves integer multiplication values
 (instead of Heaviside binarization) to compute sigma(s,t) — the number
@@ -12,8 +12,8 @@ import numpy as np
 import scipy.sparse as sp
 
 
-class DenseStormIterator:
-    """Dense BLAS-based reachability iterator (M-STORM / D-STORM-Dense).
+class DenseStrataIterator:
+    """Dense BLAS-based reachability iterator (M-STRATA / STRATA-Dense).
 
     Normal mode:  R^(k+1)* = H( H(A @ R^k) - V )
     Sigma mode:   R^(k+1)* = (A @ R^k) * mask(not V), values preserved
@@ -59,7 +59,7 @@ class DenseStormIterator:
 
 
 def run_apsp(A_csr, k=-1, verbose=True, compute_sigma=False):
-    """APSP via D-STORM dense (NumPy BLAS matmul).
+    """APSP via STRATA dense (NumPy BLAS matmul).
 
     Args:
         A_csr: Adjacency matrix (sparse or dense).
@@ -80,7 +80,7 @@ def run_apsp(A_csr, k=-1, verbose=True, compute_sigma=False):
 
     n = len(A)
     if verbose:
-        print(f"  TC2 D-STORM-Dense: n={n}" +
+        print(f"  TC2 STRATA-Dense: n={n}" +
               (" (sigma mode)" if compute_sigma else ""))
 
     D = np.zeros((n, n), dtype=np.int32)
@@ -92,7 +92,7 @@ def run_apsp(A_csr, k=-1, verbose=True, compute_sigma=False):
         np.fill_diagonal(sigma, 1.0)
         sigma[A_bool > 0] = 1.0
 
-    for Rk, power in DenseStormIterator(A_bool, k,
+    for Rk, power in DenseStrataIterator(A_bool, k,
                                         compute_sigma=compute_sigma):
         mask = Rk > 0.5
         D[mask] = power

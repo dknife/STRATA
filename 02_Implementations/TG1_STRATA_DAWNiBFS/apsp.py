@@ -1,6 +1,6 @@
-"""TG1: D-STORM-DAWNiBFS -- Bitwise frontier-sharing D-STORM with DAWN + iBFS.
+"""TG1: STRATA-DAWNiBFS -- Bitwise frontier-sharing STRATA with DAWN + iBFS.
 
-Combines D-STORM's all-source simultaneous processing with DAWN's
+Combines STRATA's all-source simultaneous processing with DAWN's
 frontier-driven expansion and iBFS's bitwise packing (SIGMOD 2016).
 
 Key ideas:
@@ -184,7 +184,7 @@ void sigma_accumulate_batch(
 
 
 def run_apsp(A_csr, k=-1, batch_size=512, verbose=True, compute_sigma=False):
-    """APSP via bitwise frontier-sharing D-STORM.
+    """APSP via bitwise frontier-sharing STRATA.
 
     Args:
         A_csr: Adjacency matrix.
@@ -207,7 +207,7 @@ def run_apsp(A_csr, k=-1, batch_size=512, verbose=True, compute_sigma=False):
     W = batch_size // 32
     num_batches = (n + batch_size - 1) // batch_size
     if verbose:
-        print(f"  TG1 D-STORM-DAWNiBFS: n={n}, batch={batch_size}, W={W}, "
+        print(f"  TG1 STRATA-DAWNiBFS: n={n}, batch={batch_size}, W={W}, "
               f"batches={num_batches}" +
               (" (sigma mode)" if compute_sigma else ""))
 

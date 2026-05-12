@@ -17,7 +17,7 @@
         "check": "PASS"
       },
       "TB1": {
-        "label": "Matrix-Brandes (D-STORM)",
+        "label": "Matrix-Brandes (STRATA)",
         "time": 0.42334929993376136,
         "check": "PASS"
       }
@@ -41,7 +41,7 @@
         "check": "PASS"
       },
       "TB1": {
-        "label": "Matrix-Brandes (D-STORM)",
+        "label": "Matrix-Brandes (STRATA)",
         "time": 0.08804699964821339,
         "check": "PASS"
       }
@@ -65,7 +65,7 @@
         "check": "PASS"
       },
       "TB1": {
-        "label": "Matrix-Brandes (D-STORM)",
+        "label": "Matrix-Brandes (STRATA)",
         "time": 0.09339499985799193,
         "check": "PASS"
       }
@@ -89,7 +89,7 @@
         "check": "PASS"
       },
       "TB1": {
-        "label": "Matrix-Brandes (D-STORM)",
+        "label": "Matrix-Brandes (STRATA)",
         "time": 0.00495269987732172,
         "check": "PASS"
       }

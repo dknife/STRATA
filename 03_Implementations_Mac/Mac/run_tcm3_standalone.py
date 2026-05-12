@@ -79,7 +79,7 @@ def main():
 
     # Import GraphBLAS methods (same process = shared GrB_init)
     from BCM5_GB_bfs.apsp import run_apsp as bcm5_apsp
-    from TCM3_DSTORM_GraphBLAS.apsp import run_apsp as tcm3_apsp
+    from TCM3_STRATA_GraphBLAS.apsp import run_apsp as tcm3_apsp
     from scipy.sparse.csgraph import shortest_path
 
     print("Building graphs...")

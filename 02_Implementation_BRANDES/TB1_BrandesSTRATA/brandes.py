@@ -1,4 +1,4 @@
-"""TB1: Matrix Brandes — D-STORM CPU optimised Betweenness Centrality.
+"""TB1: Matrix Brandes — STRATA CPU optimised Betweenness Centrality.
 
 Forward pass:  Fused SpMM + prune in Numba (parallel over rows).
                Eliminates tocoo / mask / csr_matrix overhead entirely.
@@ -208,7 +208,7 @@ def _backward_spmm(D, sigma, A_csr, diam, n, verbose):
 # ── Public API ───────────────────────────────────────────────
 
 def run_brandes(A_csr, verbose=True):
-    """Compute betweenness centrality via Matrix Brandes (D-STORM).
+    """Compute betweenness centrality via Matrix Brandes (STRATA).
 
     Args:
         A_csr: Adjacency matrix (scipy sparse or dense).
@@ -225,7 +225,7 @@ def run_brandes(A_csr, verbose=True):
 
     n = A_csr.shape[0]
     if verbose:
-        print(f"  TB1 Matrix-Brandes (D-STORM): n={n}")
+        print(f"  TB1 Matrix-Brandes (STRATA): n={n}")
 
     # ── Forward ──
     if _HAS_NUMBA:

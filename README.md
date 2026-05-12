@@ -1,10 +1,10 @@
-# D-STORM: Dynamic Sparse Topology-Aware Optimal Reachability Matrix
+# STRATA: STratified Reachability And Topology Algebra
 
 **Small World, Small Efforts** — Fast all-pairs shortest paths for graphs, from Python BFS to custom CUDA kernels.
 
-D-STORM extends the [AORM framework](https://ieeexplore.ieee.org/document/9424548) (IEEE Access, 2021) with sparse matrix redesign, Cython fused pruning, CUDA GPU acceleration, and GraphBLAS baseline comparison. This repository contains 12 APSP implementations benchmarked across 6 graph topologies.
+STRATA extends the [AORM framework](https://ieeexplore.ieee.org/document/9424548) (IEEE Access, 2021) with sparse matrix redesign, Cython fused pruning, CUDA GPU acceleration, and GraphBLAS baseline comparison. This repository contains 12 APSP implementations benchmarked across 6 graph topologies.
 
-**Project Website:** [https://dknife.github.io/STORM](https://dknife.github.io/STORM)
+**Project Website:** [https://dknife.github.io/STRATA](https://dknife.github.io/STRATA)
 
 ## Key Results (Facebook, n=4,039)
 
@@ -16,16 +16,16 @@ All 12 methods produce identical distance matrices (verified element-wise).
 |---|--------|----|----------|----------|----------|
 | 1 | **GPU-PerSrc-BFS** | BG1 | **0.016** | **122x** | Baseline |
 | 2 | **DAWN-SOVM** | BG2 | 0.019 | 100x | Baseline |
-| 3 | **D-STORM-CUDA** (guard+CAS) | TG2 | 0.028 | 68x | D-STORM |
-| 4 | **D-STORM-DAWNiBFS** (bitwise) | TG1 | 0.247 | 7.8x | D-STORM |
+| 3 | **STRATA-CUDA** (guard+CAS) | TG2 | 0.028 | 68x | STRATA |
+| 4 | **STRATA-DAWNiBFS** (bitwise) | TG1 | 0.247 | 7.8x | STRATA |
 
 ### CPU Methods
 
 | # | Method | ID | Time (s) | vs SciPy | Category |
 |---|--------|----|----------|----------|----------|
-| 1 | **D-STORM-SpMM-Cython** | TC1 | **0.984** | **2.0x** | D-STORM |
-| 2 | D-STORM-NumpyBLAS | TC2 | 1.697 | 1.1x | D-STORM |
-| 3 | D-STORM-GraphBLAS | TC3 | 1.921 | 1.0x | D-STORM |
+| 1 | **STRATA-SpMM-Cython** | TC1 | **0.984** | **2.0x** | STRATA |
+| 2 | STRATA-NumpyBLAS | TC2 | 1.697 | 1.1x | STRATA |
+| 3 | STRATA-GraphBLAS | TC3 | 1.921 | 1.0x | STRATA |
 | 4 | SciPy (C BFS) | BC2 | 1.918 | 1.0x | Baseline |
 | 5 | M-AORM | BC4 | 2.831 | 0.7x | Baseline |
 | 6 | GB-bfs | BC5 | 4.071 | 0.5x | Baseline |
@@ -36,7 +36,7 @@ All 12 methods produce identical distance matrices (verified element-wise).
 
 ```
 Tier 1  BG1/BG2/TG2  (0.005–0.03s)  GPU BFS / CUDA direct expand / DAWN-SOVM
-Tier 2  TG1          (0.01–0.25s)   GPU bitwise frontier-sharing D-STORM
+Tier 2  TG1          (0.01–0.25s)   GPU bitwise frontier-sharing STRATA
 Tier 3  TC1/BC2      (0.16–1.92s)   CPU SpMM+Cython / C BFS
 Tier 4  TC2/TC3      (0.30–3.63s)   CPU dense BLAS / GraphBLAS
 Tier 5  BC1–BC5      (0.39–14.1s)   Python BFS / edge-wise / GraphBLAS BFS
@@ -63,21 +63,21 @@ TG2 hits a memory cliff at n>15K (6.4GB dense buffers). TG1's bitwise approach (
 | BC3 | I-AORM | edge-wise row sum | CPU |
 | BC4 | M-AORM | dense BLAS matmul | CPU |
 | BC5 | GB-bfs | GrB_vxm masked BFS | CPU |
-| TC1 | D-STORM-SpMM-Cython | SciPy SpMM + Cython fused prune | CPU |
-| TC2 | D-STORM-NumpyBLAS | NumPy BLAS matmul | CPU |
-| TC3 | D-STORM-GraphBLAS | GrB_mxm + complement mask | CPU |
+| TC1 | STRATA-SpMM-Cython | SciPy SpMM + Cython fused prune | CPU |
+| TC2 | STRATA-NumpyBLAS | NumPy BLAS matmul | CPU |
+| TC3 | STRATA-GraphBLAS | GrB_mxm + complement mask | CPU |
 | BG1 | GPU-PerSrc-BFS | CUDA block-per-source BFS | GPU |
 | BG2 | DAWN-SOVM | CUDA frontier-driven BFS (DAWN) | GPU |
-| TG1 | D-STORM-DAWNiBFS | Bitwise frontier-sharing (iBFS + DAWN) | GPU |
-| TG2 | D-STORM-CUDA | CUDA CSR direct expand (guard+CAS) | GPU |
+| TG1 | STRATA-DAWNiBFS | Bitwise frontier-sharing (iBFS + DAWN) | GPU |
+| TG2 | STRATA-CUDA | CUDA CSR direct expand (guard+CAS) | GPU |
 
 ## Research Contributions
 
-This project is not a claim that D-STORM is the fastest APSP method. Rather, it is a **systematic investigation of the limits and merits of matrix-algebraic APSP**, conducted through 12 implementations on a common platform.
+This project is not a claim that STRATA is the fastest APSP method. Rather, it is a **systematic investigation of the limits and merits of matrix-algebraic APSP**, conducted through 12 implementations on a common platform.
 
 ### 1. Matrix-algebraic APSP can beat native C BFS on CPU
 
-D-STORM-SpMM-Cython (TC1) outperforms SciPy's native C BFS across **all 6 graph topologies** (up to 2.0x). This is a non-obvious result: a matrix-algebraic approach with Python orchestration beats a hand-optimized C loop. The key is Cython fused pruning — collapsing three sparse operations (booleanize → prune → footprint update) into a single C pass over COO entries.
+STRATA-SpMM-Cython (TC1) outperforms SciPy's native C BFS across **all 6 graph topologies** (up to 2.0x). This is a non-obvious result: a matrix-algebraic approach with Python orchestration beats a hand-optimized C loop. The key is Cython fused pruning — collapsing three sparse operations (booleanize → prune → footprint update) into a single C pass over COO entries.
 
 | Graph | TC1 (s) | SciPy (s) | Speedup |
 |-------|---------|-----------|---------|
@@ -86,7 +86,7 @@ D-STORM-SpMM-Cython (TC1) outperforms SciPy's native C BFS across **all 6 graph 
 
 ### 2. On GPU, matrix-algebraic APSP converges to per-source BFS
 
-Progressive optimization of D-STORM's GPU implementation reveals a structural convergence:
+Progressive optimization of STRATA's GPU implementation reveals a structural convergence:
 
 ```
 cuSPARSE SpMM (GPU-Sparse)     0.192s  ──  1.0x    matrix algebra
@@ -95,28 +95,28 @@ cuSPARSE SpMM (GPU-Sparse)     0.192s  ──  1.0x    matrix algebra
           └─ Per-source BFS     0.016s  ── 12.0x    remove all framework
 ```
 
-Each optimization step removes matrix-algebraic indirection: SpMM → direct CSR traversal → frontier sharing → independent BFS. The **remaining 2.7x gap between TG1 and BG1** is the irreducible cost of D-STORM's framework: shared footprint (atomicOr), per-hop synchronization, and batch management. This is a structural limit, not an engineering gap.
+Each optimization step removes matrix-algebraic indirection: SpMM → direct CSR traversal → frontier sharing → independent BFS. The **remaining 2.7x gap between TG1 and BG1** is the irreducible cost of STRATA's framework: shared footprint (atomicOr), per-hop synchronization, and batch management. This is a structural limit, not an engineering gap.
 
 ### 3. Systematic 12-method benchmark on common platform
 
-All 12 methods — spanning Python BFS, C BFS, AORM (edge-wise and matmul), D-STORM (3 CPU + 2 GPU variants), GraphBLAS (BFS and D-STORM), GPU per-source BFS, and DAWN — are benchmarked under identical conditions (same hardware, same graphs, same correctness verification). This enables fair cross-paradigm comparison that is difficult to find in existing literature.
+All 12 methods — spanning Python BFS, C BFS, AORM (edge-wise and matmul), STRATA (3 CPU + 2 GPU variants), GraphBLAS (BFS and STRATA), GPU per-source BFS, and DAWN — are benchmarked under identical conditions (same hardware, same graphs, same correctness verification). This enables fair cross-paradigm comparison that is difficult to find in existing literature.
 
-### 4. D-STORM's unique capabilities remain unmatched
+### 4. STRATA's unique capabilities remain unmatched
 
-Per-source BFS is faster for full APSP, but D-STORM provides capabilities that BFS cannot:
+Per-source BFS is faster for full APSP, but STRATA provides capabilities that BFS cannot:
 
 - **Dynamic edge insertion** — When edge (a,b) is added: D'(i,j) = min(D(i,j), D(i,a)+1+D(b,j)). O(n²) update vs full O(n·m) recomputation, yielding 22–33x speedup. No BFS-based method can do this without recomputing from scratch.
 - **Algebraic convergence analysis** — The matrix framework enables theoretical proofs about iteration count, convergence rate, and relationship to graph diameter.
 
-### 5. GPU D-STORM scalability via bitwise frontier sharing
+### 5. GPU STRATA scalability via bitwise frontier sharing
 
-TG1 (D-STORM-DAWNiBFS) demonstrates that combining iBFS's bitwise packing with DAWN's frontier-driven expansion reduces D-STORM's memory from 16n² to ~4.25n² bytes, enabling operation at n=20K+ where TG2 fails. While slower than pure BFS (2.7x), this is the fastest known D-STORM GPU implementation that maintains the algebraic framework at scale.
+TG1 (STRATA-DAWNiBFS) demonstrates that combining iBFS's bitwise packing with DAWN's frontier-driven expansion reduces STRATA's memory from 16n² to ~4.25n² bytes, enabling operation at n=20K+ where TG2 fails. While slower than pure BFS (2.7x), this is the fastest known STRATA GPU implementation that maintains the algebraic framework at scale.
 
 | | TG2 (guard+CAS) | TG1 (bitwise) | BG1 (pure BFS) |
 |---|---|---|---|
 | n=4K | **0.019s** | 0.052s | 0.011s |
 | n=20K | 12.8s (OOM) | 0.805s | **0.263s** |
-| Framework | D-STORM | D-STORM | None |
+| Framework | STRATA | STRATA | None |
 | Dynamic update | Yes | Yes | **No** |
 
 ## Quick Start
@@ -156,13 +156,13 @@ D = run_apsp(A)                # returns int32 distance matrix
 ├── BC3_IAORM/
 ├── BC4_MAORM/
 ├── BC5_GB_bfs/
-├── TC1_DSTORM_SpMM_Cython/   # D-STORM CPU variants
-├── TC2_DSTORM_NumpyBLAS/
-├── TC3_DSTORM_GraphBLAS/
+├── TC1_STRATA_SpMM_Cython/   # STRATA CPU variants
+├── TC2_STRATA_NumpyBLAS/
+├── TC3_STRATA_GraphBLAS/
 ├── BG1_GPU_PerSrc_BFS/       # GPU baselines
 ├── BG2_DAWN/
-├── TG1_DSTORM_DAWNiBFS/          # D-STORM GPU variants
-├── TG2_DSTORM_CUDA/
+├── TG1_STRATA_DAWNiBFS/          # STRATA GPU variants
+├── TG2_STRATA_CUDA/
 ├── common/                   # Shared utilities
 ├── run_full_benchmark.py     # Full benchmark script
 └── run_tc3_standalone.py     # TC3 standalone

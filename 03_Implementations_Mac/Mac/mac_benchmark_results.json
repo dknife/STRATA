@@ -28,12 +28,12 @@
         "check": "PASS"
       },
       "TCM1": {
-        "label": "D-STORM-SpMM",
+        "label": "STRATA-SpMM",
         "time": 1.3614807080011815,
         "check": "PASS"
       },
       "TCM2": {
-        "label": "D-STORM-NumpyBLAS",
+        "label": "STRATA-NumpyBLAS",
         "time": 1.8685844160063425,
         "check": "PASS"
       }
@@ -68,12 +68,12 @@
         "check": "PASS"
       },
       "TCM1": {
-        "label": "D-STORM-SpMM",
+        "label": "STRATA-SpMM",
         "time": 0.34793020799406804,
         "check": "PASS"
       },
       "TCM2": {
-        "label": "D-STORM-NumpyBLAS",
+        "label": "STRATA-NumpyBLAS",
         "time": 0.2752631659968756,
         "check": "PASS"
       }
@@ -108,12 +108,12 @@
         "check": "PASS"
       },
       "TCM1": {
-        "label": "D-STORM-SpMM",
+        "label": "STRATA-SpMM",
         "time": 0.36548887500248384,
         "check": "PASS"
       },
       "TCM2": {
-        "label": "D-STORM-NumpyBLAS",
+        "label": "STRATA-NumpyBLAS",
         "time": 0.40740308399836067,
         "check": "PASS"
       }
@@ -148,12 +148,12 @@
         "check": "PASS"
       },
       "TCM1": {
-        "label": "D-STORM-SpMM",
+        "label": "STRATA-SpMM",
         "time": 0.3874951660109218,
         "check": "PASS"
       },
       "TCM2": {
-        "label": "D-STORM-NumpyBLAS",
+        "label": "STRATA-NumpyBLAS",
         "time": 0.3160260830045445,
         "check": "PASS"
       }
@@ -188,12 +188,12 @@
         "check": "PASS"
       },
       "TCM1": {
-        "label": "D-STORM-SpMM",
+        "label": "STRATA-SpMM",
         "time": 0.20587700000032783,
         "check": "PASS"
       },
       "TCM2": {
-        "label": "D-STORM-NumpyBLAS",
+        "label": "STRATA-NumpyBLAS",
         "time": 3.170316624993575,
         "check": "PASS"
       }
@@ -228,12 +228,12 @@
         "check": "PASS"
       },
       "TCM1": {
-        "label": "D-STORM-SpMM",
+        "label": "STRATA-SpMM",
         "time": 0.3499077909946209,
         "check": "PASS"
       },
       "TCM2": {
-        "label": "D-STORM-NumpyBLAS",
+        "label": "STRATA-NumpyBLAS",
         "time": 0.275858958993922,
         "check": "PASS"
       }

@@ -36,6 +36,24 @@ except ImportError:
     except ImportError:
         _USE_CYTHON = False
 
+# Optional Cython entrypoints for the local-rebuild variant (may not exist
+# in older builds). Loaded separately so the rest of the module still works.
+try:
+    from EdgeManipulation.EdgeMan_DLevel._core import (
+        identify_affected_forward_with_aff as _cy_identify_fwd_aff,
+        local_rebuild_multi as _cy_local_rebuild_multi,
+    )
+    _USE_CYTHON_LOCAL = True
+except ImportError:
+    try:
+        from ._core import (
+            identify_affected_forward_with_aff as _cy_identify_fwd_aff,
+            local_rebuild_multi as _cy_local_rebuild_multi,
+        )
+        _USE_CYTHON_LOCAL = True
+    except ImportError:
+        _USE_CYTHON_LOCAL = False
+
 
 def _py_bfs(A_csr, src, n):
     """Pure Python BFS fallback."""
@@ -162,12 +180,14 @@ def delete_edge_directed(D, A_csr, a, b):
     return A_new, len(aff_sources), levels_checked
 
 
-def _py_identify_forward(D, indptr, indices, a, b, n, diameter):
+def _py_identify_forward(D, indptr, indices, a, b, n, diameter, return_aff=False):
     """
     Phase 1: Identify directly affected pairs — for each source i, check if
     (i,b) or (i,a) lost their only parent due to edge removal. O(n * d_avg).
 
     Phase 2: Forward propagation — cascade from directly affected pairs.
+
+    If return_aff=True, also returns the aff[n,n] boolean matrix.
     """
     aff = np.zeros((n, n), dtype=np.bool_)
 
@@ -254,10 +274,148 @@ def _py_identify_forward(D, indptr, indices, a, b, n, diameter):
         levels_checked = max(levels_checked, next_t)
 
     affected_sources = list(np.where(np.any(aff, axis=1))[0])
+    if return_aff:
+        return affected_sources, levels_checked, aff
     return affected_sources, levels_checked
 
 
-def _py_identify_forward_directed(D, indptr, indices, a, b, n, diameter):
+def _py_local_rebuild_row(D_row, indptr, indices, s, aff_row, n):
+    """
+    Phase-2-driven local rebuild for source s.
+
+    Recomputes only the entries D[s, j] with aff_row[j]=True, using
+    unaffected predecessors' D[s, m] as seeds.
+
+    Args:
+        D_row: current D[s, :] (int32) — correct for unaffected pairs
+        indptr, indices: CSR of A' (post-deletion adjacency)
+        s: source vertex
+        aff_row: aff[s, :] (bool) — True iff (s, j) needs recomputation
+        n: |V|
+
+    Returns:
+        new_row: int32 array of length n with corrected D[s, :].
+                 Affected entries that remain unreachable in G' map to 0
+                 (consistent with D=0 unreachable overload).
+
+    Cost: O(|aff_row| * d_max) — independent of n and m.
+    """
+    INF = np.iinfo(np.int32).max
+    affected = np.where(aff_row)[0]
+
+    new_row = D_row.copy()
+    if len(affected) == 0:
+        return new_row
+
+    # Reset affected entries; will be recomputed
+    for j in affected:
+        new_row[j] = INF
+
+    # Phase A: For each affected j, scan N_{A'}(j) for unaffected predecessors
+    # to obtain an immediate candidate distance.
+    # Unaffected predecessor m has D[s, m] correct; tentative new dist = D[s, m] + 1.
+    # Special case: m == s gives candidate 1.
+    for j in affected:
+        best = INF
+        for idx in range(indptr[j], indptr[j + 1]):
+            m = indices[idx]
+            if m == s:
+                seed = 1
+                if seed < best:
+                    best = seed
+            elif not aff_row[m]:
+                # m unaffected; D_row[m] is its correct (and final) distance
+                if D_row[m] > 0:  # m reachable from s in G (=> in G' too since unaffected)
+                    cand = D_row[m] + 1
+                    if cand < best:
+                        best = cand
+        new_row[j] = best  # may still be INF (no unaffected feeder yet)
+
+    # Phase B: Propagate within the affected subgraph using level buckets.
+    # Settled affected j (new_row[j] < INF) become seeds for unsettled affected j'.
+    from collections import defaultdict
+    buckets = defaultdict(list)
+    for j in affected:
+        if new_row[j] < INF:
+            buckets[int(new_row[j])].append(int(j))
+
+    if buckets:
+        # Process in order of increasing distance
+        t = min(buckets.keys())
+        max_seen = max(buckets.keys())
+        # Safety bound: cascade can extend up to about 2*diameter in the worst case
+        guard = 4 * (int(D_row.max()) + 1) + 8
+        steps = 0
+        while buckets and steps < guard:
+            if t in buckets:
+                frontier = buckets.pop(t)
+                for u in frontier:
+                    # Propagate from u (affected, with known new_row[u]=t)
+                    for idx in range(indptr[u], indptr[u + 1]):
+                        v = indices[idx]
+                        if aff_row[v] and new_row[v] > t + 1:
+                            # v is affected and not yet settled better
+                            new_row[v] = t + 1
+                            buckets[t + 1].append(int(v))
+                            if t + 1 > max_seen:
+                                max_seen = t + 1
+            t += 1
+            steps += 1
+            if t > max_seen and not buckets:
+                break
+
+    # Phase C: any affected j still at INF is unreachable in G'.
+    # Map to 0 to match D=0 unreachable overload.
+    for j in affected:
+        if new_row[j] == INF:
+            new_row[j] = 0
+
+    return new_row
+
+
+def delete_edge_local(D, A_csr, a, b, diameter=None):
+    """
+    Phase-2-driven local-rebuild variant of delete_edge.
+
+    Identical Phases 1 and 2 as delete_edge (level-based cascade), then
+    Phase 3 replaced by per-source local rebuild that recomputes only
+    aff[s, j]=True entries, instead of full per-source BFS.
+
+    Returns (A_new, n_affected, levels_checked) — same signature as delete_edge.
+    """
+    n = D.shape[0]
+    if diameter is None:
+        diameter = int(D.max())
+
+    A_lil = A_csr.tolil()
+    A_lil[a, b] = 0
+    A_lil[b, a] = 0
+    A_new = A_lil.tocsr()
+    A_new.eliminate_zeros()
+
+    indptr = A_new.indptr.astype(np.int32)
+    indices = A_new.indices.astype(np.int32)
+
+    if _USE_CYTHON_LOCAL:
+        if D.dtype == np.int32 and D.flags.c_contiguous:
+            D_i32 = D  # in-place; no copy
+        else:
+            D_i32 = np.ascontiguousarray(D, dtype=np.int32)
+        aff_sources, levels_checked, aff = _cy_identify_fwd_aff(
+            D_i32, indptr, indices, a, b, n, diameter
+        )
+        if len(aff_sources) > 0:
+            _cy_local_rebuild_multi(indptr, indices, aff_sources, aff, D_i32, n)
+            if D_i32 is not D:
+                np.copyto(D, D_i32)
+    else:
+        aff_sources, levels_checked, aff = _py_identify_forward(
+            D, indptr, indices, a, b, n, diameter, return_aff=True
+        )
+        for s in aff_sources:
+            D[s, :] = _py_local_rebuild_row(D[s], indptr, indices, s, aff[s], n)
+
+    return A_new, len(aff_sources), levels_checked
     """Forward propagation for directed edge a->b deletion."""
     aff = np.zeros((n, n), dtype=np.bool_)
     newly_affected_by_level = defaultdict(list)

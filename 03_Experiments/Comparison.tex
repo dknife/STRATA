@@ -220,6 +220,12 @@
   \item TG1 STRATA-cuBLAS 제거: $O(n^3)$ 시간 복잡도로 모든 조건에서 열세.
 \end{itemize}
 
+추가로 본 갱신본에서 다음 두 가지 분석을 통합하였다:
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{$\sigma$-from-shell 정리 + Matrix Brandes BC} (제~8절): STRATA 반복의 Heaviside 이전 정수값이 Brandes의 최단경로 개수 $\sigma(s,t)$를 정확히 담고 있음을 증명하고, 이를 활용한 행렬 Brandes BC 구현(TB2, C+OpenMP)이 igraph C Brandes를 $2.4$--$3.7\times$ 능가함을 실증.
+  \item \textbf{Phase~3 로컬 재구성을 갖는 레벨 기반 간선 삭제 알고리즘} (제~11절): 영향받지 않은 선행자의 $D$ 값으로부터 영향받은 항만 재계산하여 Phase~3 비용을 $\Theta(|S_{\mathrm{aff}}|\,m)$ 전체 BFS에서 $O(|\mathrm{aff}|\,d_{\max})$로 낮춤. Facebook 최악 사례($|S_{\mathrm{aff}}|=2{,}407$)에서 CPU-BFS 대비 $6.8\times$, GPU-BFS도 능가하는 실측 가속.
+\end{itemize}
+
 \subsection{프로토콜}
 \begin{itemize}[leftmargin=1.4em]
   \item \textbf{측정}: 3회 실행, 최소값 보고. GPU 1회 warmup.
@@ -1231,7 +1237,7 @@ TB1-Numba & Matrix Brandes (Numba) & 0.42s & 0.088s & 0.093s & 0.005s \\
   coordinates {(0.88,BB2) (179.1,BB1)};
 \end{axis}
 \end{tikzpicture}
-\caption{Betweenness Centrality 구현별 성능 (Facebook $n\!=\!4{,}039$, log scale). TB2(C+OpenMP)가 igraph~C 대비 3.6배 빠름.}
+\caption{Betweenness Centrality 구현별 성능 (Facebook $n\!=\!4{,}039$, log scale). TB2(C+OpenMP)가 igraph~C 대비 3.7배 빠름.}
 \label{fig:brandes}
 \end{figure}
 
@@ -1239,7 +1245,7 @@ TB1-Numba & Matrix Brandes (Numba) & 0.42s & 0.088s & 0.093s & 0.005s \\
 igraph C Brandes는 $n$회 per-source BFS+역전파를 순수 C로 수행한다. TB2는 동일한 $O(nm)$ 작업을 hop 단위 fused SpMM(전방)과 소스별 병렬 역전파(역방향)로 재조직한다. 결과:
 
 \begin{itemize}[leftmargin=1.4em]
-  \item \textbf{TB2 vs igraph}: 전 그래프에서 2.4--3.6$\times$ 우위. igraph는 소스 간 병렬화가 없으나, TB2는 전방(행 단위)과 역방향(소스 단위) 모두 OpenMP로 병렬화.
+  \item \textbf{TB2 vs igraph}: 전 그래프에서 2.4--3.7$\times$ 우위. igraph는 소스 간 병렬화가 없으나, TB2는 전방(행 단위)과 역방향(소스 단위) 모두 OpenMP로 병렬화.
   \item \textbf{TB2 vs TB1-SpMM}: 11.5$\times$. Python 글루(tocoo, mask, CSR 생성)가 전체 시간의 64\%를 차지하였으며, C 융합으로 완전 제거.
   \item \textbf{TB1-Numba vs TB1-SpMM}: 6.6$\times$. Numba JIT만으로도 SpMM 버전의 Python 오버헤드를 대폭 감소.
   \item \textbf{fused prune의 효과}: SpMM이 이미 방문한 쌍($F[i,k]=1$)에 대한 곱셈을 건너뛰므로, SciPy SpMM(모든 곱을 계산한 후 별도 프루닝)보다 총 연산량 자체가 감소.
@@ -1259,7 +1265,7 @@ Brandes의 전방($\sigma$)과 역방향($\delta$) 2단계를 \textbf{모두 행
 \end{itemize}
 
 \paragraph{실측 speedup의 원인.}
-TB2의 igraph C 대비 2.4--3.6$\times$ 우위는 두 가지 구조적 차이에 기인한다:
+TB2의 igraph C 대비 2.4--3.7$\times$ 우위는 두 가지 구조적 차이에 기인한다:
 \begin{enumerate}
 \item \textbf{Hop 묶음 + fused prune}: 이미 방문한 쌍의 곱셈을 건너뛰어 실질 연산량 감소. igraph의 per-source BFS는 이 최적화가 불가.
 \item \textbf{OpenMP 병렬화}: 전방 SpMM을 결과 행렬의 행 단위로, 역방향을 소스 단위로 병렬화. igraph는 순차 실행.
@@ -1285,7 +1291,7 @@ TB2의 igraph C 대비 2.4--3.6$\times$ 우위는 두 가지 구조적 차이에
 본 연구는 ``STRATA이 가장 빠르다''는 주장이 아니라, \textbf{행렬 대수 APSP의 한계와 가능성을 체계적으로 규명}한 것이 핵심이다.
 
 \begin{enumerate}[leftmargin=1.4em]
-  \item \textbf{Brandes 알고리즘의 행렬 재표현 및 C-level 실증 (Section~8)}: STRATA의 행렬곱에서 이진화 직전의 정수값이 $\sigma(s,t)$를 내포함을 증명하고, Brandes의 역방향 $\delta$ 누적도 $B^{(k)} \cdot A$ 행렬곱으로 표현하였다 (\textbf{Matrix Brandes}). 점근 복잡도는 Brandes와 동일한 $O(nm)$이나, hop 단위 재조직이 (1) fused pruning (방문 쌍 건너뛰기)과 (2) 행 단위 병렬화를 자연스럽게 허용한다. 순수 C+OpenMP 구현(TB2)이 igraph C Brandes를 전 그래프에서 2.4--3.6배 능가하여, 행렬 대수 재조직의 \textbf{실용적 우위를 C-level에서 실증}하였다.
+  \item \textbf{Brandes 알고리즘의 행렬 재표현 및 C-level 실증 (Section~8)}: STRATA의 행렬곱에서 이진화 직전의 정수값이 $\sigma(s,t)$를 내포함을 증명하고, Brandes의 역방향 $\delta$ 누적도 $B^{(k)} \cdot A$ 행렬곱으로 표현하였다 (\textbf{Matrix Brandes}). 점근 복잡도는 Brandes와 동일한 $O(nm)$이나, hop 단위 재조직이 (1) fused pruning (방문 쌍 건너뛰기)과 (2) 행 단위 병렬화를 자연스럽게 허용한다. 순수 C+OpenMP 구현(TB2)이 igraph C Brandes를 전 그래프에서 2.4--3.7배 능가하여, 행렬 대수 재조직의 \textbf{실용적 우위를 C-level에서 실증}하였다.
 
   \item \textbf{계산 등가성 규명}: STRATA과 BFS의 총 간선 순회 횟수가 수학적으로 동일함을 증명 ($C_{\text{STRATA}}(k) = C_{\text{BFS}}(k) = \sum_{t<k} \sum_{(i,j) \in F^{(t)}} \deg(j)$). 두 접근의 차이는 총 계산량이 아닌 \textbf{작업 조직 구조}---hop 단위 묶음(STRATA) vs 소스 단위 묶음(BFS)---에 있으며, 어느 쪽이 유리한지는 실행 플랫폼 아키텍처에 의존한다.
 
@@ -1293,7 +1299,7 @@ TB2의 igraph C 대비 2.4--3.6$\times$ 우위는 두 가지 구조적 차이에
 
   \item \textbf{12종 체계적 벤치마크}: Python BFS, C BFS, AORM (edge-wise/matmul), STRATA (CPU 3종 + GPU 2종), GraphBLAS (BFS/STRATA), GPU per-source BFS, DAWN을 동일 환경에서 비교. 기존 문헌에서 찾기 어려운 공정한 교차 패러다임 비교.
 
-  \item \textbf{거리 행렬 기반 동적 갱신 알고리즘}: STRATA의 반복 구조 분석에서 착안하여, APSP 거리 행렬 $D$와 인접 구조 $A$만으로 동작하는 간선 삭제 알고리즘을 설계하였다. 레벨별 대체 부모 체크와 조기 종료를 특징으로 하며, BFS 트리 등 보조 자료구조가 불필요하다. 이 알고리즘은 STRATA 고유가 아닌, $D$를 산출하는 모든 APSP 방법과 조합 가능한 \textbf{독립적 기여}이다. 간선 삽입(무방향: $D'_{ij} = \min(D_{ij},\, D_{ia}+1+D_{bj},\, D_{ib}+1+D_{aj})$, $O(n^2)$) 역시 $D$의 공통 성질이다.
+  \item \textbf{거리 행렬 기반 동적 갱신 알고리즘 (Phase 3 로컬 재구성)}: STRATA의 반복 구조 분석에서 착안하여, APSP 거리 행렬 $D$와 인접 구조 $A$만으로 동작하는 3단계 간선 삭제 알고리즘을 설계하였다. Phase 1(직접 효과)과 Phase 2(전방 전파)로 쌍별 연쇄 패턴 $\mathrm{aff}[\cdot,\cdot]$을 산출하고, Phase 3에서 영향받지 않은 선행자의 $D$ 값으로부터 영향받은 항만 재계산하여 Phase 3 비용을 $\Theta(|S_{\mathrm{aff}}|\,m)$ 전체 BFS에서 $O(|\mathrm{aff}|\,d_{\max})$로 낮춘다. Facebook 최악 사례($|S_{\mathrm{aff}}|=2{,}407$)에서 CPU-BFS 대비 $6.8\times$ 실측 가속, GPU-BFS도 능가. BFS 트리 등 보조 자료구조가 불필요하다. 이 알고리즘은 STRATA 고유가 아닌, $D$를 산출하는 모든 APSP 방법과 조합 가능한 \textbf{독립적 기여}이다. 간선 삽입(무방향: $D'_{ij} = \min(D_{ij},\, D_{ia}+1+D_{bj},\, D_{ib}+1+D_{aj})$, $O(n^2)$) 역시 $D$의 공통 성질이다.
 
   \item \textbf{GPU STRATA 확장성}: TG1(DAWNiBFS)이 iBFS 비트 압축으로 TG2의 메모리 병목($16n^2$)을 해결하여 $n = 20{,}000$+ 동작 가능. BFS 대비 2.7$\times$ 느리나, STRATA 프레임워크를 유지하면서 대규모 동작하는 최선의 구현.
 \end{enumerate}
@@ -1308,8 +1314,8 @@ TB2의 igraph C 대비 2.4--3.6$\times$ 우위는 두 가지 구조적 차이에
   \item \textbf{GPU, full APSP}: BG1 GPU-PerSrc-BFS (모든 조건 최고).
   \item \textbf{GPU, STRATA 프레임워크}: $n < 15{,}000$ $\to$ TG2, $n \geq 15{,}000$ $\to$ TG1.
   \item \textbf{CPU 전용}: TC1 STRATA-SpMM-Cython (모든 위상 CPU 최고, SciPy 대비 최대 2.0$\times$).
-  \item \textbf{Betweenness Centrality}: Matrix Brandes C+OpenMP (igraph C Brandes 대비 2.4--3.6$\times$). Numba 버전도 igraph 대비 1.6--2.2$\times$ 우위.
-  \item \textbf{동적 간선 갱신}: 거리 행렬 $D$ 기반 증분 갱신 (삽입 $O(n^2)$, 삭제 레벨별 전파). APSP 방법 무관.
+  \item \textbf{Betweenness Centrality}: Matrix Brandes C+OpenMP (igraph C Brandes 대비 2.4--3.7$\times$). Numba 버전도 igraph 대비 1.6--2.2$\times$ 우위.
+  \item \textbf{동적 간선 갱신}: 거리 행렬 $D$ 기반 증분 갱신 (삽입 $O(n^2)$ 닫힌 형태; 삭제 3단계: Phase 1 직접 효과 + Phase 2 전방 전파 + Phase 3 로컬 재구성, $O(|\mathrm{aff}|\,d_{\max})$). 무거운 삭제 사례에서 BFS 대비 $6.8\times$. APSP 방법 무관.
 \end{itemize}
 \end{bluebox}
 
@@ -1575,9 +1581,10 @@ SDN 환경에서 링크 장애, 라우터 제거 시 라우팅 테이블 갱신.
 \textbf{ID} & \textbf{접근} & \textbf{플랫폼} & \textbf{핵심 기술} \\
 \midrule
 EdgeMan\_BFS & 소스별 & CPU & Cython 타입드 루프 + CSR memoryview \\
-EdgeMan\_DLevel & 레벨별 & CPU & Cython + forward propagation \\
+EdgeMan\_DLevel & 레벨별 (Phase 3 BFS) & CPU & Cython + forward propagation \\
+EdgeMan\_DLevelLocal & 레벨별 (Phase 3 로컬 재구성) & CPU & Cython + level-bucket multi-source BFS \\
 EdgeMan\_BFS\_G & 소스별 & GPU & CUDA 커널 (block-per-source BFS) \\
-EdgeMan\_DLevel\_G & 레벨별 & GPU & CUDA Phase 1 직접 검사 + Phase 2 전파 \\
+EdgeMan\_DLevel\_G & 레벨별 (Phase 3 BFS) & GPU & CUDA Phase 1 직접 검사 + Phase 2 전파 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1702,6 +1709,44 @@ PHASE_2_FORWARD_PROPAGATION(D, A', aff, newly_affected_by_level):
   \item \textbf{BFS 재계산}: \texttt{bfs\_multi} 커널 (BG1 패턴 재활용).
 \end{itemize}
 
+\subsubsection{간선 삭제: 레벨별 + Phase 3 로컬 재구성 (EdgeMan\_DLevelLocal)}
+
+\paragraph{설계.}
+DLevel과 동일한 Phase 1+2 결과($\mathrm{aff}[\cdot,\cdot]$ 행렬)를 받아, Phase 3에서 전체 BFS 재실행 대신 \textbf{영향받은 부분 그래프 내 다중 소스 BFS}로 영향받은 항만 재계산한다. 각 영향 소스 $s$에 대해:
+
+\begin{mathbox}{Phase 3 로컬 재구성 알고리즘}
+\begin{verbatim}
+LOCAL_REBUILD(D, A', s, aff[s], n):
+    # Phase 3A: 영향받지 않은 이웃으로부터 초기 거리 시드
+    for j with aff[s,j] == 1:
+        d'[j] = min over m in N_{A'}(j) of:
+            1            if m == s
+            D[s,m] + 1   if aff[s,m] == 0 and D[s,m] > 0
+
+    # Phase 3B: 영향받은 부분 그래프 내 레벨 버킷 BFS
+    place settled (j, d'[j]) into buckets B_{d'[j]}
+    for t = min_level to max_level (확장 가능):
+        for j in B_t with d'[j] == t:    # stale entry skip
+            for m in N_{A'}(j) with aff[s,m] == 1 and d'[m] > t+1:
+                d'[m] = t + 1
+                append m to B_{t+1}
+
+    # Phase 3C: 기록; 도달 불가는 0으로 매핑
+    for j with aff[s,j] == 1:
+        D[s,j] = 0 if d'[j] == INF else d'[j]
+\end{verbatim}
+\end{mathbox}
+
+\paragraph{Cython 구현.}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{버킷 풀 할당}: 정점이 여러 버킷에 동시 등록될 수 있으므로(작은 거리로 재완화 시), 정점당 단일 \texttt{next} 포인터로는 연결 리스트가 깨진다. 별도 entry 풀(\texttt{entry\_vertex[]}, \texttt{entry\_next[]})에서 매 등록 시 신규 entry를 할당하고, \texttt{new\_row[j] == t} 동등성 검사로 stale entry를 건너뛴다.
+  \item \textbf{도달 불가 처리}: 영향받은 $j$가 $G'$에서 도달 불가능하면 $d'[j] = \infty$로 남고, Phase 3C에서 $D[s,j] = 0$ ($D{=}0$ 도달 불가 오버로딩)으로 매핑.
+  \item \textbf{in-place 갱신}: $D$가 \texttt{int32} contiguous면 추가 복사 없이 in-place 갱신.
+\end{itemize}
+
+\paragraph{정확성 검증.}
+소형 합성 그래프(8 정점, bridge edge) 9개 삭제 + Facebook 10개 무작위 삭제 = 19개 케이스 모두에서 BFS baseline, DLevel, DLevelLocal 세 변종이 element-wise 동일한 $D'$을 산출함을 확인($scipy.sparse.csgraph.shortest\_path$ 대조 포함).
+
 \subsubsection{실험 결과}
 
 환경: AMD Zen 5 CPU, NVIDIA RTX 5080 GPU ($\sim$30 TFLOPS, 16GB). Facebook 그래프에서 무작위 간선 10개에 대해 삽입/삭제 수행. 삭제는 기존 간선을 제거하고, 삽입은 $D[a,b] > 1$인 비간선을 추가.
@@ -1726,50 +1771,60 @@ GPU (CuPy) & 0.035s & CPU 대비 4.4$\times$ 가속 \\
 \paragraph{간선 삭제 성능.}
 
 \begin{table}[H]\centering
-\caption{간선 삭제 성능 비교 (Facebook $n=4{,}039$, Cython/CUDA)}
+\caption{간선 삭제 성능 비교 (Facebook $n=4{,}039$, Cython/CUDA). 행별 최선은 굵게.}
 \small
-\begin{tabular}{@{}p{2.5cm}rcccc@{}}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}p{2.3cm}rccccc@{}}
 \toprule
-\textbf{케이스} & $|S_{\text{aff}}|$ & \textbf{CPU-BFS} & \textbf{CPU-DLevel} & \textbf{GPU-BFS} & \textbf{GPU-DLevel} \\
+\textbf{케이스} & $|S_{\text{aff}}|$ & \textbf{CPU-BFS} & \textbf{CPU-DLevel} & \textbf{CPU-DLevelLocal} & \textbf{GPU-BFS} & \textbf{GPU-DLevel} \\
 \midrule
-일반 (2--3 aff) & 2--3 & \textbf{0.013s} & 0.020s & 0.030s & 0.032s \\
-중간 (12 aff) & 12 & \textbf{0.017s} & 0.026s & 0.029s & 0.045s \\
-최악 (2407 aff) & 2407 & 0.211s & 0.217s & \textbf{0.044s} & 0.123s \\
+일반 (2--3 aff) & 2--3 & \textbf{0.010s} & 0.019s & 0.017s & 0.030s & 0.032s \\
+중간 (12 aff) & 12 & \textbf{0.011s} & 0.021s & 0.017s & 0.029s & 0.045s \\
+최악 (2407 aff) & 2407 & 0.207s & 0.215s & \textbf{0.030s} & 0.044s & 0.123s \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\paragraph{CPU-DLevelLocal: Phase 3 로컬 재구성 변종.}
+DLevelLocal은 Phase 1+2(직접 효과 + 전방 전파)를 그대로 수행한 후, Phase 3을 \textbf{전체 BFS 재실행이 아닌 로컬 재구성}으로 대체한다. 각 영향 소스 $s$에 대해 $\mathrm{aff}[s,j]=1$인 항만 재계산하되, 영향받지 않은 이웃 $m$의 $D[s,m]$ 값을 시드로 활용한 다중 소스 BFS를 영향받은 부분 그래프 내에서 수행한다. Phase~3 비용이 $\Theta(|S_{\mathrm{aff}}|\cdot m)$에서 $O(|\mathrm{aff}|\cdot d_{\max})$로 감소한다. 19개 테스트 케이스(소형 합성 9 + Facebook 10)에서 BFS/DLevel과 원소별 동일한 $D'$ 산출을 검증하였다.
+
+\paragraph{$|S_{\text{aff}}|=2{,}407$ 최악 사례: $6.8\times$ 가속.}
+가장 무거운 단일 삭제 사례에서 CPU-DLevelLocal($0.030$~s)은 CPU-BFS($0.207$~s)를 $6.8\times$ 능가하며 GPU-BFS($0.044$~s)도 능가한다. 점근적 개선 $O(|\mathrm{aff}|\cdot d_{\max})$ vs $\Theta(|S_{\mathrm{aff}}|\cdot m)$이 실측에서 구체화되었다. 가벼운 삭제($|S_{\text{aff}}|=2{-}3$)에서는 Phase 1+2 식별 비용이 양쪽 모두 지배하므로 CPU-BFS의 단순 구조가 약간 빠르다. 교차점은 Facebook에서 $|S_{\text{aff}}|$가 수백 부근이다. 60회 무작위 삭제 합산에서 CPU-DLevelLocal의 총 실측 시간은 CPU-BFS 대비 $3\%$ 이내이며, 드문 무거운 사건의 큰 가속이 흔한 가벼운 사건의 작은 호출당 오버헤드를 흡수한다.
 
 \paragraph{최적화 단계별 DLevel 가속 이력.}
 
 \begin{table}[H]\centering
-\caption{CPU DLevel 최적화 단계별 삭제 시간 ($|S_{\text{aff}}|=2$ 케이스)}
+\caption{CPU DLevel 최적화 단계별 삭제 시간. 가벼운 사례($|S_{\text{aff}}|=2$)와 최악 사례($|S_{\text{aff}}|=2{,}407$) 비교.}
 \small
-\begin{tabular}{@{}lrl@{}}
+\begin{tabular}{@{}lrrl@{}}
 \toprule
-\textbf{단계} & \textbf{시간} & \textbf{병목} \\
+\textbf{단계} & $\boldsymbol{|S|=2}$ & $\boldsymbol{|S|=2{,}407}$ & \textbf{병목} \\
 \midrule
-1. Python 전체 스캔 & 2.6s & 레벨당 $\sim$백만 쌍 Python 루프 \\
-2. Python + \texttt{bool} 배열 & 1.3s & \texttt{set} $\to$ 배열로 lookup 개선 \\
-3. Cython 전체 스캔 & 0.039s & C 루프로 $\sim$33$\times$ 가속 \\
-4. Cython + forward prop & \textbf{0.020s} & Phase 1 $O(n \cdot d_{\text{avg}})$ + Phase 2 $\approx 0$ \\
+1. Python 전체 스캔 & 2.6s & --- & 레벨당 $\sim$백만 쌍 Python 루프 \\
+2. Python + \texttt{bool} 배열 & 1.3s & --- & \texttt{set} $\to$ 배열로 lookup 개선 \\
+3. Cython 전체 스캔 & 0.039s & --- & C 루프로 $\sim$33$\times$ 가속 \\
+4. Cython + forward prop (DLevel) & 0.019s & 0.215s & Phase 3 전체 BFS가 비용 지배 \\
+\rowcolor{cpubest!8} 5. + Phase 3 local rebuild (DLevelLocal) & \textbf{0.017s} & \textbf{0.030s} & Phase 3 $O(|\mathrm{aff}|\,d_{\max})$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Python $\to$ Cython + forward propagation으로 총 $\sim$130$\times$ 가속.
+Python $\to$ Cython으로 가벼운 사례에서 $\sim$130$\times$ 가속하였고, Phase 3 로컬 재구성으로 무거운 사례에서 추가로 $\sim$7$\times$ 가속(BFS 대비 $6.8\times$)을 얻었다.
 
 \subsubsection{실험에서 발견된 사실}
 
 \begin{enumerate}[leftmargin=1.4em]
   \item \textbf{DLevel Phase 1 = BFS 식별}: Phase 1(직접 효과 검사)이 소스별 접근의 식별 단계와 구조적으로 동일하다. 두 접근의 ``식별 비용 하한''이 같음.
 
-  \item \textbf{Cascade 추적 이점 미발현}: Facebook 소세계 그래프에서 소스별 접근의 1차 판별이 이미 정확하여, Phase 2에서 추가로 발견되거나 제거되는 affected 소스가 없었다. 모든 10개 테스트에서 두 접근의 $|S_{\text{aff}}|$가 동일. 이는 소세계 그래프의 높은 클러스터링이 ``cascade가 발생한 뒤 레벨별로 소멸''되는 것이 아니라, ``대체 부모가 풍부하여 cascade 자체가 발생하지 않음''을 의미한다. 레벨별 접근의 이론적 이점(정확한 cascade 추적)이 발현되려면, 1차 판별에서 affected이지만 cascade가 도중에 소멸되는 \textbf{중간 연결성} 그래프가 필요할 것으로 추정된다 (Grid 등 고직경·저클러스터링 그래프에서의 검증은 향후 과제).
+  \item \textbf{$S_{\text{aff}}$는 Phase 1로 결정됨}: 알고리즘 구조상 Phase 2에서 표시되는 모든 $(i,j)$는 $i$를 Phase 1 항목에서 가져오므로, $S_{\text{aff}}^{\text{Phase 1}} = S_{\text{aff}}^{\text{Phase 2}}$이다. Facebook 10회 무작위 삭제 모두에서 BFS, DLevel, DLevelLocal의 $|S_{\text{aff}}|$가 일치함을 실측 확인. 따라서 Phase 2가 추가하는 것은 행 단위 affected \emph{소스} 집합이 아니라, 각 영향 소스 내의 \textbf{쌍별 연쇄 패턴} $\mathrm{aff}[\cdot,\cdot]$이다.
 
-  \item \textbf{GPU 최대 이점은 대량 affected}: $|S_{\text{aff}}| = 2{,}407$일 때 GPU-BFS가 CPU-BFS 대비 4.8$\times$ 가속. 2{,}407개 소스의 BFS를 GPU 블록으로 동시 실행하는 효과. 소수 affected에서는 커널 런치/데이터 전송 오버헤드로 GPU 이점 감소.
+  \item \textbf{Phase 2의 부하 지배적 역할 (DLevelLocal에서)}: 위 관찰은 ``Phase 2가 무용하다''가 아니라 ``Phase 2의 출력을 어떻게 사용할 것인가''의 문제이다. DLevel(전체 BFS Phase 3)에서는 Phase 2 출력이 사용되지 않아 instrumentation pass에 그치지만, DLevelLocal은 $\mathrm{aff}[\cdot,\cdot]$을 Phase 3 로컬 재구성의 핵심 입력으로 소비한다. 즉 Phase 2 없이는 Phase 3 비용을 $\Theta(|S_{\text{aff}}|\,m)$에서 $O(|\mathrm{aff}|\,d_{\max})$로 낮출 수 없다.
 
-  \item \textbf{Forward propagation의 효과}: 전체 스캔 대비 DLevel 식별 비용을 $O(P_t \cdot d_{\text{avg}}) \to O(n \cdot d_{\text{avg}} + |\text{cascade}| \cdot d_{\text{avg}}^2)$로 감소. Cascade가 작은 소세계에서 Phase 2 비용 $\approx 0$이므로, DLevel이 BFS와 거의 동등한 성능에 도달.
+  \item \textbf{DLevelLocal: 점근적 개선의 실측 구체화}: Phase 3 로컬 재구성으로 무거운 삭제 사례($|S_{\text{aff}}|=2{,}407$)에서 CPU-BFS 대비 $6.8\times$ 가속, GPU-BFS($0.044$~s)도 능가하는 $0.030$~s. 가벼운 삭제에서는 Phase 1+2 비용이 양쪽 모두 지배하므로 BFS의 단순 구조가 약간 빠르나, 60회 무작위 삭제 합산 총 시간에서 BFS와 $3\%$ 이내.
 
-  \item \textbf{동적 갱신은 APSP 방법에 독립}: 삽입과 삭제 모두 $D$와 $A$만으로 동작. STRATA 고유의 이점은 발견되지 않았다.
+  \item \textbf{GPU 최대 이점은 대량 affected (현 GPU-DLevel)}: $|S_{\text{aff}}| = 2{,}407$일 때 GPU-BFS가 CPU-BFS 대비 4.8$\times$ 가속. 그러나 CPU-DLevelLocal($0.030$~s)이 GPU-BFS($0.044$~s)도 능가한다. GPU 측에 Phase 3 로컬 재구성을 포팅하면 GPU에서도 동일한 점근적 이득이 가능할 것으로 예상된다 (향후 과제).
+
+  \item \textbf{동적 갱신은 APSP 방법에 독립}: 삽입과 삭제 모두 $D$와 $A$만으로 동작. 어떤 APSP 방법으로 $D$를 산출했든 본 알고리즘이 동일하게 적용된다.
 \end{enumerate}
 
 \subsection{관련 연구와의 비교}
@@ -1785,7 +1840,7 @@ Even--Shiloach (1981) & BFS 트리 + 레벨 전파 & $O(m \cdot n)$ 총합 & 단
 Ramalingam--Reps (1996) & 영향 정점만 재계산 & 영향 비례 & 삽입+삭제 \\
 Demetrescu--Italiano (2004) & 행렬 기반 완전 동적 & $O(n^2 \log^3 n)$ 상각 & 가중치 지원 \\
 \midrule
-\textbf{본 설계} & $D$ 레벨별 대체 부모 + 조기 종료 & cascade 비례 & BFS 트리 불필요, APSP 방법 무관 \\
+\textbf{본 설계 (DLevelLocal)} & $D$ 레벨별 대체 부모 + Phase 3 로컬 재구성 & $O(|\mathrm{aff}| \cdot d_{\max})$ & BFS 트리 불필요, APSP 방법 무관 \\
 \bottomrule
 \end{tabular}
 \end{table}
